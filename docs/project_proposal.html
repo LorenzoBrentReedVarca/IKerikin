@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IKeriKin Project Proposal</title>
+<style>
+@page { size: A4; margin: 16mm; }
+* { box-sizing: border-box; }
+body { margin: 0; color: #24202b; font: 11pt/1.5 "Segoe UI", sans-serif; }
+h1, h2, h3 { color: #5731b5; margin: 0 0 8px; }
+h1 { font-size: 30pt; }
+h2 { margin-top: 22px; font-size: 17pt; border-bottom: 2px solid #e5dcfa; padding-bottom: 5px; }
+p, ul, ol { margin: 6px 0 12px; }
+a { color: #5731b5; }
+.cover { min-height: 245mm; display: flex; flex-direction: column; justify-content: center; }
+.tagline { color: #d93676; font-size: 17pt; font-style: italic; }
+.meta { margin-top: 28px; padding: 18px; background: #f5f0ff; border-left: 5px solid #6d42d8; }
+.page-break { break-before: page; }
+.screen { break-before: page; text-align: center; }
+.screen img { display: block; width: auto; height: 215mm; max-width: 100%; margin: 10px auto 0; object-fit: contain; object-position: top center; }
+.status { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; padding: 0; list-style: none; }
+.status li::before { content: "✓ "; color: #24834b; font-weight: 700; }
+footer { position: fixed; bottom: 2mm; right: 0; color: #777; font-size: 8pt; }
+</style>
+</head>
+<body>
+<section class="cover">
+  <h1>IKeriKin</h1>
+  <p class="tagline">I Care for Your Kin</p>
+  <p><strong>Revised Project Proposal</strong></p>
+  <div class="meta">
+    <p><strong>Platform:</strong> Flutter mobile and web application</p>
+    <p><strong>Primary audience:</strong> Filipino families supporting children with special educational needs</p>
+    <p><strong>Repository:</strong> <a href="https://github.com/LorenzoBrentReedVarca/IKeriKin">github.com/LorenzoBrentReedVarca/IKeriKin</a></p>
+  </div>
+</section>
+<section class="page-break">
+<h2>Project Overview</h2>
+<p>IKeriKin is an AI-powered learning application for Filipino families with children who have special educational needs. Parents create child profiles containing age, disability, interests, learning preferences, challenges, and educational goals. IKeriKin uses this context to generate personalized stories, flashcards, quizzes, memory games, matching activities, daily practice, and caregiver guidance.</p>
+<h2>Problem Statement</h2>
+<p>Families often spend significant time searching for learning materials that fit a child's developmental needs, language, interests, and pace. Generic resources may not be accessible or engaging. IKeriKin provides one accessible tool for creating appropriate activities and monitoring progress.</p>
+<h2>Target Users</h2>
+<ul><li>Parents and guardians of children with special educational needs</li><li>Children with ASD, ADHD, dyslexia, Down syndrome, speech delay, developmental delay, and learning disabilities</li><li>Future users: schools, SPED centers, and educational organizations</li></ul>
+<h2>Objectives</h2>
+<ul><li>Improve access to personalized learning materials.</li><li>Reduce caregiver preparation time with responsible AI assistance.</li><li>Encourage regular practice using goals, XP, coins, streaks, and badges.</li><li>Provide clear weekly, monthly, and all-time progress views.</li><li>Support inclusive use with large text, dyslexia-friendly type, high contrast, reduced motion, and text-to-speech.</li></ul>
+</section>
+<section class="page-break">
+<h2>Core Features</h2>
+<ul><li>Secure parent registration, login, recovery, and offline preview mode</li><li>Multiple child profiles with disability, challenge, interest, and learning-style context</li><li>AI-generated lessons in English or Filipino</li><li>Stories, flashcards, quizzes, memory games, and matching activities</li><li>Parent tips, daily practice, goals, scores, XP, coins, streaks, and badges</li><li>Weekly, monthly, and all-time progress reporting</li><li>Accessibility preferences and story text-to-speech</li><li>Optional Supabase persistence and Edge Functions</li></ul>
+<h2>Technology</h2>
+<ul><li>Flutter and Dart for cross-platform delivery</li><li>Riverpod for state management</li><li>GoRouter for navigation and refresh-safe deep links</li><li>SharedPreferences for offline preview persistence</li><li>Supabase for optional auth, database, storage, realtime, and AI Edge Functions</li></ul>
+<h2>Screen Flow</h2>
+<ol><li><strong>Home:</strong> welcome, daily goal, continue learning, streak, XP, and rewards.</li><li><strong>Child Profile:</strong> learner details, needs, preferences, progress, and editing.</li><li><strong>AI Lesson Generator:</strong> learner, goal, context, difficulty, language, duration, and notes.</li><li><strong>AI Lesson:</strong> story, cards, quiz, games, parent tips, and daily practice.</li><li><strong>Progress:</strong> weekly/monthly trends, all-time summary, badges, and next lesson.</li></ol>
+<h2>Expected Impact</h2>
+<p>IKeriKin aims to make inclusive learning easier to access, help caregivers participate confidently in daily education, and keep children engaged through personalized content and positive reinforcement.</p>
+<h2>Current Status</h2>
+<ul class="status"><li>Revised proposal</li><li>Flutter project</li><li>Organized architecture</li><li>Core UI</li><li>Working navigation</li><li>Five required screens</li><li>Passing analysis/tests</li><li>Documentation screenshots</li></ul>
+</section>
+<section class="screen"><h2>Screen 1: Welcome / Home</h2><img src="screenshots/home.png" alt="Home dashboard"></section>
+<section class="screen"><h2>Screen 2: Child Profile</h2><img src="screenshots/child-profile.png" alt="Child profile"></section>
+<section class="screen"><h2>Screen 3: AI Lesson Generator</h2><img src="screenshots/lesson-generator.png" alt="AI lesson generator"></section>
+<section class="screen"><h2>Screen 4: AI Lesson</h2><img src="screenshots/ai-lesson.png" alt="Generated lesson"></section>
+<section class="screen"><h2>Screen 5: Progress Dashboard</h2><img src="screenshots/progress-dashboard.png" alt="Progress dashboard"></section>
+<footer>IKeriKin · Revised Project Proposal</footer>
+</body>
+</html>
