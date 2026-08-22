@@ -9,6 +9,9 @@ enum LessonDifficulty { easy, medium, challenging }
 /// Lifecycle status of a generated lesson.
 enum LessonStatus { pending, generating, completed, failed }
 
+/// Lifecycle status of an animated scene/lesson video render.
+enum VideoGenerationStatus { queued, generating, processing, completed, failed }
+
 /// Immutable application user profile.
 @immutable
 class AppUser {
@@ -151,14 +154,25 @@ class ChildProfile {
 /// A single flashcard in an AI-generated lesson.
 @immutable
 class Flashcard {
-  const Flashcard({required this.front, required this.back});
+  const Flashcard({
+    required this.front,
+    required this.back,
+    this.imageDescription = '',
+  });
   final String front;
   final String back;
+  /// Optional visual description a parent/illustrator can use as a fallback image prompt.
+  final String imageDescription;
   factory Flashcard.fromJson(Map<String, dynamic> json) => Flashcard(
     front: json['front'] as String? ?? '',
     back: json['back'] as String? ?? '',
+    imageDescription: json['image_description'] as String? ?? '',
   );
-  Map<String, dynamic> toJson() => {'front': front, 'back': back};
+  Map<String, dynamic> toJson() => {
+    'front': front,
+    'back': back,
+    'image_description': imageDescription,
+  };
 }
 
 /// A quiz question and its answer choices.
@@ -169,36 +183,88 @@ class QuizQuestion {
     required this.options,
     required this.correctIndex,
     required this.explanation,
+    this.difficulty = '',
   });
   final String question;
   final List<String> options;
   final int correctIndex;
   final String explanation;
+  final String difficulty;
   factory QuizQuestion.fromJson(Map<String, dynamic> json) => QuizQuestion(
     question: json['question'] as String? ?? '',
     options: List<String>.from(json['options'] as List? ?? const []),
     correctIndex: json['correct_index'] as int? ?? 0,
     explanation: json['explanation'] as String? ?? '',
+    difficulty: json['difficulty'] as String? ?? '',
   );
   Map<String, dynamic> toJson() => {
     'question': question,
     'options': options,
     'correct_index': correctIndex,
     'explanation': explanation,
+    'difficulty': difficulty,
   };
 }
 
 /// A pair used by memory and matching activities.
 @immutable
 class ActivityPair {
-  const ActivityPair({required this.left, required this.right});
+  const ActivityPair({
+    required this.left,
+    required this.right,
+    this.imageDescription = '',
+    this.educationalConnection = '',
+  });
   final String left;
   final String right;
+  final String imageDescription;
+  final String educationalConnection;
   factory ActivityPair.fromJson(Map<String, dynamic> json) => ActivityPair(
     left: json['left'] as String? ?? '',
     right: json['right'] as String? ?? '',
+    imageDescription: json['image_description'] as String? ?? '',
+    educationalConnection: json['educational_connection'] as String? ?? '',
   );
-  Map<String, dynamic> toJson() => {'left': left, 'right': right};
+  Map<String, dynamic> toJson() => {
+    'left': left,
+    'right': right,
+    'image_description': imageDescription,
+    'educational_connection': educationalConnection,
+  };
+}
+
+/// A single scene in an AI-generated animated video script.
+@immutable
+class VideoScene {
+  const VideoScene({
+    required this.sceneNumber,
+    required this.durationSeconds,
+    required this.narration,
+    required this.visualPrompt,
+    required this.educationalObjective,
+  });
+  final int sceneNumber;
+  final int durationSeconds;
+  final String narration;
+  /// Prompt sent to the video generation provider (e.g. Runway).
+  final String visualPrompt;
+  final String educationalObjective;
+
+  factory VideoScene.fromJson(Map<String, dynamic> json) => VideoScene(
+    sceneNumber: json['scene_number'] as int? ?? 1,
+    durationSeconds: json['duration_seconds'] as int? ?? 8,
+    narration: json['narration'] as String? ?? '',
+    visualPrompt: json['visual_prompt'] as String? ?? '',
+    educationalObjective: json['educational_objective'] as String? ?? '',
+  );
+
+  Map<String, dynamic> toJson() => {
+    'scene_number': sceneNumber,
+    'duration_seconds': durationSeconds,
+    'narration': narration,
+    'visual_prompt': visualPrompt,
+    'educational_objective': educationalObjective,
+  };
 }
 
 /// Structured educational content returned by an AI provider.
@@ -214,6 +280,8 @@ class LessonContent {
     required this.matchingActivity,
     required this.dailyActivity,
     required this.parentTips,
+    this.objectives = const [],
+    this.videoScript = const [],
   });
 
   final String title;
@@ -225,6 +293,10 @@ class LessonContent {
   final List<ActivityPair> matchingActivity;
   final String dailyActivity;
   final List<String> parentTips;
+  /// Learning objectives the lesson targets.
+  final List<String> objectives;
+  /// Structured animated video script generated alongside the lesson.
+  final List<VideoScene> videoScript;
 
   factory LessonContent.fromJson(Map<String, dynamic> json) => LessonContent(
     title: json['title'] as String? ?? 'Personalized Lesson',
@@ -255,6 +327,12 @@ class LessonContent {
         .toList(),
     dailyActivity: json['daily_activity'] as String? ?? '',
     parentTips: List<String>.from(json['parent_tips'] as List? ?? const []),
+    objectives: List<String>.from(json['objectives'] as List? ?? const []),
+    videoScript: (json['video_script'] as List? ?? const [])
+        .map(
+          (item) => VideoScene.fromJson(Map<String, dynamic>.from(item as Map)),
+        )
+        .toList(),
   );
 
   Map<String, dynamic> toJson() => {
@@ -267,10 +345,12 @@ class LessonContent {
     'matching_activity': matchingActivity.map((item) => item.toJson()).toList(),
     'daily_activity': dailyActivity,
     'parent_tips': parentTips,
+    'objectives': objectives,
+    'video_script': videoScript.map((item) => item.toJson()).toList(),
   };
 }
 
-/// Current state of an asynchronous AI video render.
+/// Current state of an asynchronous AI 3D model render.
 @immutable
 class VideoGeneration {
   const VideoGeneration({
@@ -278,12 +358,14 @@ class VideoGeneration {
     required this.status,
     required this.progress,
     this.error,
+    this.modelUrl,
   });
 
   final String id;
   final String status;
   final int progress;
   final String? error;
+  final String? modelUrl;
 
   bool get isComplete => status == 'completed';
   bool get isFailed => status == 'failed';
@@ -294,6 +376,7 @@ class VideoGeneration {
         status: json['status'] as String? ?? 'queued',
         progress: (json['progress'] as num?)?.round() ?? 0,
         error: (json['error'] as Map?)?['message'] as String?,
+        modelUrl: json['model_url'] as String?,
       );
 }
 
@@ -309,6 +392,8 @@ class LessonRequest {
     required this.durationMinutes,
     required this.additionalNotes,
     required this.createdAt,
+    this.videoDurationSeconds = 60,
+    this.contentType = 'Story',
   });
 
   final String id;
@@ -319,6 +404,10 @@ class LessonRequest {
   final int durationMinutes;
   final String additionalNotes;
   final DateTime createdAt;
+  /// Requested animated video length: 60 (Quick Lesson), 180 (Learning Adventure), or 300 (Full Story) seconds.
+  final int videoDurationSeconds;
+  /// Story, Educational Adventure, Cartoon Lesson, or Interactive Lesson.
+  final String contentType;
 
   factory LessonRequest.fromJson(Map<String, dynamic> json) => LessonRequest(
     id: json['id'] as String,
@@ -332,6 +421,8 @@ class LessonRequest {
     durationMinutes: json['duration_minutes'] as int? ?? 15,
     additionalNotes: json['additional_notes'] as String? ?? '',
     createdAt: DateTime.parse(json['created_at'] as String),
+    videoDurationSeconds: json['video_duration_seconds'] as int? ?? 60,
+    contentType: json['content_type'] as String? ?? 'Story',
   );
 
   Map<String, dynamic> toJson() => {
@@ -343,6 +434,8 @@ class LessonRequest {
     'duration_minutes': durationMinutes,
     'additional_notes': additionalNotes,
     'created_at': createdAt.toIso8601String(),
+    'video_duration_seconds': videoDurationSeconds,
+    'content_type': contentType,
   };
 }
 
@@ -458,6 +551,78 @@ class AdminMetrics {
   final int openReports;
 }
 
+/// A single sense of a word returned by the Free Dictionary API.
+@immutable
+class WordMeaning {
+  const WordMeaning({
+    required this.partOfSpeech,
+    required this.definitions,
+    required this.examples,
+  });
+
+  final String partOfSpeech;
+  final List<String> definitions;
+  final List<String> examples;
+
+  factory WordMeaning.fromJson(Map<String, dynamic> json) {
+    final definitionEntries = (json['definitions'] as List? ?? const [])
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+    return WordMeaning(
+      partOfSpeech: json['partOfSpeech'] as String? ?? '',
+      definitions: definitionEntries
+          .map((entry) => entry['definition'] as String? ?? '')
+          .where((definition) => definition.isNotEmpty)
+          .toList(),
+      examples: definitionEntries
+          .map((entry) => entry['example'] as String?)
+          .whereType<String>()
+          .toList(),
+    );
+  }
+}
+
+/// A word lookup result from the Free Dictionary API
+/// (https://dictionaryapi.dev), used by the vocabulary explorer.
+@immutable
+class WordDefinition {
+  const WordDefinition({
+    required this.word,
+    required this.phonetic,
+    required this.audioUrl,
+    required this.meanings,
+  });
+
+  final String word;
+  final String phonetic;
+  final String? audioUrl;
+  final List<WordMeaning> meanings;
+
+  factory WordDefinition.fromJson(Map<String, dynamic> json) {
+    final phonetics = (json['phonetics'] as List? ?? const [])
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+    final audio = phonetics
+        .map((entry) => entry['audio'] as String?)
+        .firstWhere(
+          (url) => url != null && url.isNotEmpty,
+          orElse: () => null,
+        );
+    return WordDefinition(
+      word: json['word'] as String? ?? '',
+      phonetic:
+          json['phonetic'] as String? ??
+          (phonetics.isEmpty ? '' : phonetics.first['text'] as String? ?? ''),
+      audioUrl: audio,
+      meanings: (json['meanings'] as List? ?? const [])
+          .map(
+            (item) => WordMeaning.fromJson(Map<String, dynamic>.from(item as Map)),
+          )
+          .toList(),
+    );
+  }
+}
+
 /// Canonical profile choices shared by forms and AI prompts.
 abstract final class ProfileOptions {
   static const disabilities = [
@@ -513,4 +678,151 @@ abstract final class ProfileOptions {
     'Mixed',
   ];
   static const languages = ['English', 'Filipino', 'Cebuano'];
+
+  /// Preferred AI-generated content presentation.
+  static const contentTypes = [
+    'Story',
+    'Educational Adventure',
+    'Cartoon Lesson',
+    'Interactive Lesson',
+  ];
+
+  /// Maps a friendly video length label to its duration in seconds.
+  static const videoDurations = <String, int>{
+    'Quick Lesson (1 minute)': 60,
+    'Learning Adventure (3 minutes)': 180,
+    'Full Story (5 minutes)': 300,
+  };
 }
+
+/// Parses a video generation status string, defaulting to [VideoGenerationStatus.queued].
+VideoGenerationStatus parseVideoGenerationStatus(String? value) =>
+    VideoGenerationStatus.values.firstWhere(
+      (status) => status.name == value,
+      orElse: () => VideoGenerationStatus.queued,
+    );
+
+/// The outcome of generating (or checking) a single animated scene.
+@immutable
+class VideoGenerationResult {
+  const VideoGenerationResult({
+    required this.sceneNumber,
+    required this.status,
+    this.providerJobId,
+    this.videoUrl,
+    this.errorMessage,
+  });
+
+  final int sceneNumber;
+  final VideoGenerationStatus status;
+  /// External provider (e.g. Runway) task/job identifier used for polling.
+  final String? providerJobId;
+  final String? videoUrl;
+  final String? errorMessage;
+
+  factory VideoGenerationResult.fromJson(Map<String, dynamic> json) =>
+      VideoGenerationResult(
+        sceneNumber: json['scene_number'] as int? ?? 1,
+        status: parseVideoGenerationStatus(json['status'] as String?),
+        providerJobId: json['provider_job_id'] as String?,
+        videoUrl: json['video_url'] as String?,
+        errorMessage: json['error_message'] as String?,
+      );
+}
+
+/// A single persisted animated scene render tracked in `generated_video_scenes`.
+@immutable
+class GeneratedVideoScene {
+  const GeneratedVideoScene({
+    required this.id,
+    required this.jobId,
+    required this.lessonId,
+    required this.childId,
+    required this.sceneNumber,
+    required this.provider,
+    required this.status,
+    this.providerJobId,
+    this.videoUrl,
+    this.errorMessage,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String jobId;
+  final String lessonId;
+  final String childId;
+  final int sceneNumber;
+  final String provider;
+  final VideoGenerationStatus status;
+  final String? providerJobId;
+  final String? videoUrl;
+  final String? errorMessage;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  factory GeneratedVideoScene.fromJson(Map<String, dynamic> json) =>
+      GeneratedVideoScene(
+        id: json['id'] as String,
+        jobId: json['job_id'] as String,
+        lessonId: json['lesson_id'] as String,
+        childId: json['child_id'] as String,
+        sceneNumber: json['scene_number'] as int? ?? 1,
+        provider: json['provider'] as String? ?? 'runway',
+        status: parseVideoGenerationStatus(json['generation_status'] as String?),
+        providerJobId: json['generation_job_id'] as String?,
+        videoUrl: json['video_url'] as String?,
+        errorMessage: json['error_message'] as String?,
+        createdAt: DateTime.parse(json['created_at'] as String),
+        updatedAt: DateTime.parse(json['updated_at'] as String),
+      );
+}
+
+/// The overall animated lesson video render, aggregating all of its scenes.
+@immutable
+class VideoGenerationJob {
+  const VideoGenerationJob({
+    required this.id,
+    required this.lessonId,
+    required this.childId,
+    required this.provider,
+    required this.status,
+    this.videoUrl,
+    this.errorMessage,
+    required this.createdAt,
+    required this.updatedAt,
+    this.scenes = const [],
+  });
+
+  final String id;
+  final String lessonId;
+  final String childId;
+  final String provider;
+  final VideoGenerationStatus status;
+  /// Final combined lesson video URL, set once every scene completes.
+  final String? videoUrl;
+  final String? errorMessage;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final List<GeneratedVideoScene> scenes;
+
+  bool get isComplete => status == VideoGenerationStatus.completed;
+  bool get isFailed => status == VideoGenerationStatus.failed;
+
+  factory VideoGenerationJob.fromJson(
+    Map<String, dynamic> json, {
+    List<GeneratedVideoScene> scenes = const [],
+  }) => VideoGenerationJob(
+    id: json['id'] as String,
+    lessonId: json['lesson_id'] as String,
+    childId: json['child_id'] as String,
+    provider: json['provider'] as String? ?? 'runway',
+    status: parseVideoGenerationStatus(json['status'] as String?),
+    videoUrl: json['video_url'] as String?,
+    errorMessage: json['error_message'] as String?,
+    createdAt: DateTime.parse(json['created_at'] as String),
+    updatedAt: DateTime.parse(json['updated_at'] as String),
+    scenes: scenes,
+  );
+}
+

@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../application/providers.dart';
 import '../../domain/models.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/decorative_scenes.dart';
 
 /// Parent-facing overview of the selected child's learning profile.
 class ChildProfileScreen extends ConsumerWidget {
@@ -16,25 +17,21 @@ class ChildProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authStateProvider).value;
-    if (user == null) return const Center(child: CircularProgressIndicator());
+    if (user == null) return const LoadingView(message: 'Signing you in…');
     final childrenState = ref.watch(childrenProvider(user.id));
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Child Profile'),
-        actions: [
-          IconButton(
-            onPressed: () => context.push('/settings'),
-            tooltip: 'Settings and accessibility',
-            icon: const Icon(Icons.settings_outlined),
+      backgroundColor: Colors.transparent,
+      body: SceneBackground(
+        scene: SceneKind.profile,
+        child: ResponsiveBody(
+          maxWidth: 900,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          child: childrenState.when(
+          loading: () => const LoadingView(message: 'Loading profile…'),
+          error: (error, _) => ErrorView(
+            message: error.toString(),
+            onRetry: () => ref.invalidate(childrenProvider(user.id)),
           ),
-        ],
-      ),
-      body: ResponsiveBody(
-        maxWidth: 900,
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-        child: childrenState.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => ErrorView(message: error.toString()),
           data: (children) {
             if (children.isEmpty) {
               return EmptyState(
@@ -56,17 +53,36 @@ class ChildProfileScreen extends ConsumerWidget {
             final progress = ref.watch(progressProvider(child.id)).value;
             return ListView(
               children: [
+                HeroBanner(
+                  icon: Icons.favorite_rounded,
+                  title: '${child.name}\'s profile',
+                  colorfulTitle: true,
+                  subtitle: 'Everything that shapes lessons made for ${child.name}.',
+                  actions: [
+                    MastheadAction(
+                      icon: Icons.settings_outlined,
+                      tooltip: 'Settings and accessibility',
+                      onPressed: () => context.push('/settings'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
                 _ProfileHero(child: child),
                 const SizedBox(height: 14),
                 Card(
-                  color: const Color(0xFFF6F1FF),
+                  color: Theme.of(context).colorScheme.surfaceContainerLow,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
-                        const CircleAvatar(
-                          backgroundColor: Color(0xFFE5D9FF),
-                          child: Icon(Icons.track_changes_rounded),
+                        CircleAvatar(
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primaryContainer,
+                          foregroundColor: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer,
+                          child: const Icon(Icons.track_changes_rounded),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -98,7 +114,7 @@ class ChildProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 8),
                 ResponsiveGrid(
                   minItemWidth: 260,
-                  childAspectRatio: 2.6,
+                  itemHeight: 92,
                   children: [
                     _ProfileFact(
                       icon: Icons.accessibility_new_rounded,
@@ -137,7 +153,7 @@ class ChildProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 8),
                 ResponsiveGrid(
                   minItemWidth: 135,
-                  childAspectRatio: 1.35,
+                  itemHeight: 136,
                   children: [
                     MetricCard(
                       icon: Icons.menu_book_rounded,
@@ -207,6 +223,7 @@ class ChildProfileScreen extends ConsumerWidget {
             );
           },
         ),
+        ),
       ),
     );
   }
@@ -221,7 +238,7 @@ class _ProfileHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-    color: const Color(0xFFFAF8FF),
+    margin: EdgeInsets.zero,
     child: Padding(
       padding: const EdgeInsets.all(18),
       child: Wrap(
@@ -229,7 +246,7 @@ class _ProfileHero extends StatelessWidget {
         runSpacing: 14,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          ChildAvatar(name: child.name, photoUrl: child.photoUrl, radius: 62),
+          ChildAvatar(name: child.name, photoUrl: child.photoUrl, radius: 56),
           ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 200, maxWidth: 520),
             child: Column(
@@ -241,7 +258,9 @@ class _ProfileHero extends StatelessWidget {
                 ),
                 Text(
                   'Age ${child.age}  •  ${child.gender}',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Wrap(
@@ -266,6 +285,7 @@ class _ProfileHero extends StatelessWidget {
                       context.push('/children/${child.id}/edit', extra: child),
                   icon: const Icon(Icons.edit_outlined),
                   label: const Text('Edit profile'),
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
                 ),
               ],
             ),
@@ -289,34 +309,47 @@ class _ProfileFact extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) => Card(
-    margin: EdgeInsets.zero,
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: color.withValues(alpha: .12),
-            foregroundColor: color,
-            child: Icon(icon),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w900),
-                ),
-                Text(value, maxLines: 2, overflow: TextOverflow.ellipsis),
-              ],
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = readableAccent(context, color);
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: accent.withValues(alpha: .15),
+              foregroundColor: accent,
+              child: Icon(icon),
             ),
-          ),
-        ],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  Text(
+                    value,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// Lists, selects, edits, and deletes a parent's child profiles.
@@ -326,7 +359,7 @@ class ChildrenScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authStateProvider).value;
-    if (user == null) return const Center(child: CircularProgressIndicator());
+    if (user == null) return const LoadingView(message: 'Signing you in…');
     final children = ref.watch(childrenProvider(user.id));
     final selected = ref.watch(selectedChildProvider);
     return Scaffold(
@@ -338,7 +371,7 @@ class ChildrenScreen extends ConsumerWidget {
       ),
       body: ResponsiveBody(
         child: children.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const LoadingView(message: 'Loading profiles…'),
           error: (error, _) => ErrorView(
             message: error.toString(),
             onRetry: () => ref.invalidate(childrenProvider(user.id)),
@@ -366,18 +399,26 @@ class ChildrenScreen extends ConsumerWidget {
                           : null,
                       child: ListTile(
                         contentPadding: const EdgeInsets.all(14),
-                        leading: CircleAvatar(
-                          radius: 28,
-                          backgroundImage: child.photoUrl == null
-                              ? null
-                              : NetworkImage(child.photoUrl!),
-                          child: child.photoUrl == null
-                              ? Text(child.name.substring(0, 1).toUpperCase())
-                              : null,
+                        leading: ChildAvatar(
+                          name: child.name,
+                          photoUrl: child.photoUrl,
                         ),
-                        title: Text(
-                          child.name,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        title: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                child.name,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            if (selected == child.id) ...[
+                              const SizedBox(width: 8),
+                              const Icon(Icons.check_circle_rounded, size: 18),
+                            ],
+                          ],
                         ),
                         subtitle: Text(
                           'Age ${child.age} • ${child.preferredLanguage}\n${child.interests.take(3).join(' • ')}',
@@ -390,6 +431,7 @@ class ChildrenScreen extends ConsumerWidget {
                           if (context.mounted) context.go('/home');
                         },
                         trailing: PopupMenuButton<String>(
+                          tooltip: 'Profile options',
                           onSelected: (action) async {
                             if (action == 'edit')
                               context.push(
@@ -425,10 +467,21 @@ class ChildrenScreen extends ConsumerWidget {
                             }
                           },
                           itemBuilder: (_) => const [
-                            PopupMenuItem(value: 'edit', child: Text('Edit')),
+                            PopupMenuItem(
+                              value: 'edit',
+                              child: ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: Icon(Icons.edit_outlined),
+                                title: Text('Edit'),
+                              ),
+                            ),
                             PopupMenuItem(
                               value: 'delete',
-                              child: Text('Delete'),
+                              child: ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: Icon(Icons.delete_outline_rounded),
+                                title: Text('Delete'),
+                              ),
                             ),
                           ],
                         ),

@@ -13,7 +13,19 @@ serve(async (request) => {
     const model = Deno.env.get("AI_MODEL") ?? "gpt-4o-mini";
     if (!apiKey) throw new Error("AI_API_KEY is not configured in Supabase Edge Function secrets.");
     const { request: lessonRequest, child } = await request.json();
-    const prompt = `Create a safe, strengths-based special education lesson for a Filipino child. Never diagnose or provide medical advice. Use age-appropriate, respectful language.\nChild profile: ${JSON.stringify(child)}\nLesson request: ${JSON.stringify(lessonRequest)}\nReturn JSON only with this exact shape: {"title":"","summary":"","story":"","flashcards":[{"front":"","back":""}],"quiz":[{"question":"","options":["","",""],"correct_index":0,"explanation":""}],"memory_game":[{"left":"","right":""}],"matching_activity":[{"left":"","right":""}],"daily_activity":"","parent_tips":[""]}. Include 5 flashcards, 5 quiz questions, 4 pairs per game, and 4 parent tips. Respect the requested language and duration.`;
+
+    const videoDurationSeconds = Number(lessonRequest?.video_duration_seconds ?? 60);
+    const sceneCount = Math.max(3, Math.min(10, Math.round(videoDurationSeconds / 8)));
+    const contentType = String(lessonRequest?.content_type ?? "Story");
+
+    const prompt = `Create a safe, strengths-based special education lesson package for a Filipino child. Never diagnose or provide medical advice. Use age-appropriate, respectful, and encouraging language tailored to the child's learning needs (e.g. short sentences and simple vocabulary for Dyslexia; short sections and frequent interaction for ADHD; simple vocabulary and repetition for Speech Delay).
+Child profile: ${JSON.stringify(child)}
+Lesson request: ${JSON.stringify(lessonRequest)}
+Preferred content type: ${contentType}.
+The animated video should last about ${videoDurationSeconds} seconds, split into exactly ${sceneCount} short scenes suitable for a video generation API.
+Return JSON only with this exact shape:
+{"title":"","summary":"","objectives":[""],"story":"","video_script":[{"scene_number":1,"duration_seconds":8,"narration":"","visual_prompt":"","educational_objective":""}],"flashcards":[{"front":"","back":"","image_description":""}],"quiz":[{"question":"","options":["","",""],"correct_index":0,"explanation":"","difficulty":""}],"memory_game":[{"left":"","right":"","image_description":"","educational_connection":""}],"matching_activity":[{"left":"","right":"","image_description":"","educational_connection":""}],"daily_activity":"","parent_tips":[""]}.
+Include 2-4 objectives, 5 flashcards, 5 quiz questions, 4 pairs per game, exactly ${sceneCount} video scenes (each 6-10 seconds, with a short child-friendly narration line and a detailed, child-safe visual_prompt describing a colorful animated cartoon scene for an AI video generator), and 4 parent tips. Visual prompts must never include real people, on-screen text, logos, or copyrighted characters. Respect the requested language and duration.`;
     const aiResponse = await fetch(endpoint, {
       method: "POST",
       headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -27,3 +39,4 @@ serve(async (request) => {
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
+

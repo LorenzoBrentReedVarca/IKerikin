@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -49,10 +50,33 @@ final aiLessonProvider = Provider<AiLessonProvider>((ref) {
       : SupabaseAiLessonProvider(client);
 });
 
-/// Provides cloud video generation when Supabase is configured.
+/// Provides cloud 3D model generation when Supabase is configured.
 final aiVideoProvider = Provider<AiVideoProvider?>((ref) {
   final client = ref.watch(supabaseClientProvider);
   return client == null ? null : SupabaseAiVideoProvider(client);
+});
+
+/// Provides the swappable animated lesson-video generation service.
+final videoGenerationServiceProvider = Provider<VideoGenerationService?>((ref) {
+  final client = ref.watch(supabaseClientProvider);
+  return client == null ? null : SupabaseVideoGenerationService(client);
+});
+
+/// Provides animated lesson video job persistence and orchestration.
+final videoJobRepositoryProvider = Provider<VideoJobRepository?>((ref) {
+  final service = ref.watch(videoGenerationServiceProvider);
+  if (service == null) return null;
+  return SupabaseVideoJobRepository(ref.watch(supabaseClientProvider), service);
+});
+
+/// Streams the animated video generation job (if any) for a lesson.
+final videoJobProvider = StreamProvider.family<VideoGenerationJob?, String>((
+  ref,
+  lessonId,
+) {
+  final repository = ref.watch(videoJobRepositoryProvider);
+  if (repository == null) return Stream.value(null);
+  return repository.watchJobForLesson(lessonId);
 });
 
 /// Provides lesson generation and persistence.
@@ -75,6 +99,18 @@ final progressRepositoryProvider = Provider<ProgressRepository>(
 /// Provides restricted administrative data access.
 final adminRepositoryProvider = Provider<AdminRepository>(
   (ref) => SupabaseAdminRepository(ref.watch(supabaseClientProvider)),
+);
+
+/// Shared HTTP client for outbound REST calls to third-party APIs.
+final httpClientProvider = Provider<http.Client>((ref) {
+  final client = http.Client();
+  ref.onDispose(client.close);
+  return client;
+});
+
+/// Provides vocabulary lookups from the Free Dictionary API.
+final dictionaryRepositoryProvider = Provider<DictionaryRepository>(
+  (ref) => FreeDictionaryRepository(ref.watch(httpClientProvider)),
 );
 
 /// Streams a parent's child profiles.
@@ -261,6 +297,26 @@ final childControllerProvider = NotifierProvider<ChildController, bool>(
   ChildController.new,
 );
 
+/// Looks up word definitions from the Free Dictionary API and exposes
+/// loading, data, and error states to the vocabulary explorer screen.
+class WordLookupController extends AsyncNotifier<WordDefinition?> {
+  @override
+  Future<WordDefinition?> build() async => null;
+
+  Future<void> lookup(String word) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+      () => ref.read(dictionaryRepositoryProvider).lookup(word),
+    );
+  }
+}
+
+/// Provides the active word lookup state.
+final wordLookupControllerProvider =
+    AsyncNotifierProvider<WordLookupController, WordDefinition?>(
+      WordLookupController.new,
+    );
+
 /// Coordinates lesson generation and completion mutations.
 class LessonController extends Notifier<bool> {
   @override
@@ -296,3 +352,40 @@ class LessonController extends Notifier<bool> {
 final lessonControllerProvider = NotifierProvider<LessonController, bool>(
   LessonController.new,
 );
+
+/// Coordinates animated lesson video generation and retry mutations.
+class VideoJobController extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  Future<VideoGenerationJob?> start(Lesson lesson, ChildProfile child) async {
+    final repository = ref.read(videoJobRepositoryProvider);
+    if (repository == null) return null;
+    state = true;
+    try {
+      final job = await repository.startGeneration(lesson, child);
+      ref.invalidate(videoJobProvider(lesson.id));
+      return job;
+    } finally {
+      state = false;
+    }
+  }
+
+  Future<VideoGenerationJob?> retry(Lesson lesson, String jobId) async {
+    final repository = ref.read(videoJobRepositoryProvider);
+    if (repository == null) return null;
+    state = true;
+    try {
+      final job = await repository.retry(jobId, lesson.content.videoScript);
+      ref.invalidate(videoJobProvider(lesson.id));
+      return job;
+    } finally {
+      state = false;
+    }
+  }
+}
+
+/// Provides animated lesson video mutation state.
+final videoJobControllerProvider =
+    NotifierProvider<VideoJobController, bool>(VideoJobController.new);
+

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../application/providers.dart';
 import '../../core/config/app_config.dart';
+import '../../core/theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
 /// Shared visual frame for all authentication screens.
@@ -13,80 +14,183 @@ class AuthFrame extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.child,
+    this.showBackButton = false,
   });
   final String title;
   final String subtitle;
   final Widget child;
+  final bool showBackButton;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: ResponsiveBody(
-      maxWidth: 480,
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 28),
-            Center(
-              child: Container(
-                width: 84,
-                height: 84,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.primary,
-                      Theme.of(context).colorScheme.tertiary,
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: const Icon(
-                  Icons.favorite_rounded,
-                  size: 44,
-                  color: Colors.white,
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: showBackButton
+          ? AppBar(backgroundColor: Colors.transparent, elevation: 0)
+          : null,
+      body: Stack(
+        children: [
+          // Soft gradient wash behind the auth card gives depth without noise.
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    scheme.primaryContainer.withValues(alpha: .55),
+                    scheme.surface,
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.displaySmall,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            const SizedBox(height: 30),
-            Card(
-              child: Padding(padding: const EdgeInsets.all(24), child: child),
-            ),
-            if (!AppConfig.hasSupabase) ...[
-              const SizedBox(height: 12),
-              const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(14),
-                  child: Row(
-                    children: [
-                      Icon(Icons.offline_bolt_rounded),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Preview mode: cloud sync and Google login are disabled.',
+          ),
+          Positioned(
+            top: -80,
+            right: -60,
+            child: _softBlob(240, scheme.tertiary.withValues(alpha: .22)),
+          ),
+          Positioned(
+            top: 120,
+            left: -80,
+            child: _softBlob(200, scheme.primary.withValues(alpha: .18)),
+          ),
+          ResponsiveBody(
+            maxWidth: 480,
+            child: SingleChildScrollView(
+              child: AnimatedAppear(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 40),
+                    const Center(child: _AnimatedAuthLogo()),
+                    const SizedBox(height: 24),
+                    if (showBackButton) ...[
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.displaySmall,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        subtitle,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ] else ...[
+                      const Center(child: BubbleWordmark(fontSize: 40)),
+                      const SizedBox(height: 14),
+                      Center(child: TaglinePill(text: subtitle)),
+                    ],
+                    const SizedBox(height: 30),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: child,
+                      ),
+                    ),
+                    if (!AppConfig.hasSupabase) ...[
+                      const SizedBox(height: 12),
+                      Card(
+                        color: Theme.of(context).colorScheme.tertiaryContainer,
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.offline_bolt_rounded,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onTertiaryContainer,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Preview mode: cloud sync and Google login are disabled.',
+                                  style: TextStyle(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onTertiaryContainer,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
-                  ),
+                  ],
                 ),
               ),
-            ],
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _softBlob(double size, Color color) => IgnorePointer(
+    child: Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
     ),
   );
+}
+
+/// Breathing IKeriKin logo mark used at the top of every auth screen. Falls
+/// back to a static version when the user has requested reduced motion.
+class _AnimatedAuthLogo extends StatefulWidget {
+  const _AnimatedAuthLogo();
+
+  @override
+  State<_AnimatedAuthLogo> createState() => _AnimatedAuthLogoState();
+}
+
+class _AnimatedAuthLogoState extends State<_AnimatedAuthLogo>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2600),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    Widget mark(double glow) => Container(
+      width: 92,
+      height: 92,
+      decoration: BoxDecoration(
+        gradient: AppTheme.heroGradient(context),
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: scheme.primary.withValues(alpha: .28 + .12 * glow),
+            blurRadius: 28 + 6 * glow,
+            spreadRadius: -4,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: const Icon(Icons.favorite_rounded, size: 48, color: Colors.white),
+    );
+
+    if (prefersReducedMotion(context)) return mark(0);
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final t = Curves.easeInOut.transform(_controller.value);
+        return Transform.scale(scale: .96 + .04 * t, child: mark(t));
+      },
+    );
+  }
 }
 
 /// Parent email and Google sign-in screen.
@@ -154,6 +258,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 prefixIcon: const Icon(Icons.lock_outline_rounded),
                 suffixIcon: IconButton(
                   onPressed: () => setState(() => _obscure = !_obscure),
+                  tooltip: _obscure ? 'Show password' : 'Hide password',
                   icon: Icon(
                     _obscure
                         ? Icons.visibility_outlined
@@ -251,6 +356,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return AuthFrame(
       title: 'Create your account',
       subtitle: 'Start personalized learning for your child.',
+      showBackButton: true,
       child: Form(
         key: _formKey,
         child: Column(
@@ -350,6 +456,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   Widget build(BuildContext context) => AuthFrame(
     title: 'Reset your password',
     subtitle: 'We will email a secure reset link.',
+    showBackButton: true,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

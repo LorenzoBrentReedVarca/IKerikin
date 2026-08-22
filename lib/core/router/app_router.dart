@@ -8,6 +8,7 @@ import '../../application/providers.dart';
 import '../../domain/models.dart';
 import '../../presentation/screens/auth_screens.dart';
 import '../../presentation/screens/child_screens.dart';
+import '../../presentation/screens/dictionary_screen.dart';
 import '../../presentation/screens/learning_screens.dart';
 import '../../presentation/screens/support_screens.dart';
 import '../../presentation/widgets/app_shell.dart';
@@ -119,6 +120,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
       GoRoute(path: '/admin', builder: (_, _) => const AdminScreen()),
+      GoRoute(
+        path: '/dictionary',
+        builder: (_, _) => const WordExplorerScreen(),
+      ),
     ],
   );
 });

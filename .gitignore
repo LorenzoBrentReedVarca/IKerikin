@@ -37,7 +37,14 @@ migrate_working_dir/
 .env
 .env.*
 !.env.example
+dart_define.json
 supabase/.temp/
+
+# Local tooling and editor state
+.claude/
+.vscode/
+.kombai/
+devtools_options.yaml
 
 # Symbolication related
 app.*.symbols

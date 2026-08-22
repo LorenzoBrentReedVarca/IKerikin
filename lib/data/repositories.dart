@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -309,15 +310,13 @@ class SupabaseAiLessonProvider implements AiLessonProvider {
   }
 }
 
-/// AI video generation contract consumed by lesson playback screens.
+/// AI 3D model generation contract consumed by lesson playback screens.
 abstract interface class AiVideoProvider {
-  Future<VideoGeneration> create(Lesson lesson);
+  Future<VideoGeneration> create(Lesson lesson, ChildProfile child);
   Future<VideoGeneration> getStatus(String videoId);
-  Uri contentUri(String videoId);
-  Map<String, String> get contentHeaders;
 }
 
-/// Supabase Edge Function adapter that keeps the video API key off-device.
+/// Supabase Edge Function adapter that keeps the Meshy API key off-device.
 class SupabaseAiVideoProvider implements AiVideoProvider {
   const SupabaseAiVideoProvider(this._client);
 
@@ -337,32 +336,169 @@ class SupabaseAiVideoProvider implements AiVideoProvider {
   }
 
   @override
-  Future<VideoGeneration> create(Lesson lesson) => _invoke({
+  Future<VideoGeneration> create(Lesson lesson, ChildProfile child) => _invoke({
     'action': 'create',
     'lesson_id': lesson.id,
     'title': lesson.content.title,
     'summary': lesson.content.summary,
     'story': lesson.content.story,
+    'child_preferences': {
+      'interests': child.interests,
+      'learning_styles': child.learningStyles,
+      'preferred_language': child.preferredLanguage,
+    },
   });
 
   @override
   Future<VideoGeneration> getStatus(String videoId) =>
       _invoke({'action': 'status', 'video_id': videoId});
-
-  @override
-  Uri contentUri(String videoId) => Uri.parse(
-    '${AppConfig.supabaseUrl}/functions/v1/${AppConfig.videoFunctionName}',
-  ).replace(queryParameters: {'action': 'content', 'video_id': videoId});
-
-  @override
-  Map<String, String> get contentHeaders => {
-    'apikey': AppConfig.supabaseAnonKey,
-    if (_client.auth.currentSession case final session?)
-      'Authorization': 'Bearer ${session.accessToken}',
-  };
 }
 
-/// Offline lesson generator used for previews and network-independent learning.
+/// Swappable animated lesson-video generation contract.
+///
+/// The Flutter app never talks to a video provider (e.g. Runway) directly —
+/// implementations must proxy through a Supabase Edge Function so provider
+/// API keys stay server-side. Swapping providers only requires a new
+/// implementation of this interface (or changing the Edge Function's
+/// internal provider), never a UI change.
+abstract interface class VideoGenerationService {
+  /// Starts (or resumes) rendering every scene of a lesson's video script.
+  Future<VideoGenerationJob> startJob(Lesson lesson, ChildProfile child);
+
+  /// Fetches the latest aggregate job + per-scene status.
+  Future<VideoGenerationJob> getJob(String jobId);
+
+  /// Re-queues failed scenes of an existing job without losing completed ones.
+  Future<VideoGenerationJob> retryJob(String jobId, List<VideoScene> scenes);
+}
+
+/// Supabase Edge Function adapter for the Runway-backed video pipeline.
+///
+/// The Edge Function (`generate-video-scenes`) owns the actual provider
+/// integration and the `RUNWAY_API_KEY` secret; this class only proxies
+/// requests and normalizes responses into [VideoGenerationJob].
+class SupabaseVideoGenerationService implements VideoGenerationService {
+  const SupabaseVideoGenerationService(this._client);
+  final SupabaseClient _client;
+
+  static const _functionName = 'generate-video-scenes';
+
+  Future<VideoGenerationJob> _invoke(Map<String, dynamic> body) async {
+    final response = await _client.functions.invoke(
+      _functionName,
+      body: body,
+    );
+    if (response.status < 200 || response.status >= 300) {
+      throw Exception(
+        'Video generation service returned status ${response.status}.',
+      );
+    }
+    final data = Map<String, dynamic>.from(response.data as Map);
+    if (data['error'] is String) throw Exception(data['error']);
+    final scenes = (data['scenes'] as List? ?? const [])
+        .map(
+          (item) => GeneratedVideoScene.fromJson(
+            Map<String, dynamic>.from(item as Map),
+          ),
+        )
+        .toList();
+    return VideoGenerationJob.fromJson(
+      Map<String, dynamic>.from(data['job'] as Map),
+      scenes: scenes,
+    );
+  }
+
+  @override
+  Future<VideoGenerationJob> startJob(Lesson lesson, ChildProfile child) =>
+      _invoke({
+        'action': 'create',
+        'lesson_id': lesson.id,
+        'child_id': child.id,
+        'scenes': lesson.content.videoScript.map((s) => s.toJson()).toList(),
+      });
+
+  @override
+  Future<VideoGenerationJob> getJob(String jobId) =>
+      _invoke({'action': 'status', 'job_id': jobId});
+
+  @override
+  Future<VideoGenerationJob> retryJob(String jobId, List<VideoScene> scenes) =>
+      _invoke({
+        'action': 'retry',
+        'job_id': jobId,
+        'scenes': scenes.map((s) => s.toJson()).toList(),
+      });
+}
+
+/// Persists and retrieves animated lesson video job state.
+abstract interface class VideoJobRepository {
+  Future<VideoGenerationJob?> getJobForLesson(String lessonId);
+  Stream<VideoGenerationJob?> watchJobForLesson(String lessonId);
+  Future<VideoGenerationJob> startGeneration(Lesson lesson, ChildProfile child);
+  Future<VideoGenerationJob> retry(String jobId, List<VideoScene> scenes);
+}
+
+/// Supabase-backed job repository built on [VideoGenerationService].
+class SupabaseVideoJobRepository implements VideoJobRepository {
+  SupabaseVideoJobRepository(this._client, this._service);
+  final SupabaseClient? _client;
+  final VideoGenerationService _service;
+
+  Future<List<GeneratedVideoScene>> _scenesForJob(String jobId) async {
+    if (_client == null) return const [];
+    final rows = await _client
+        .from('generated_video_scenes')
+        .select()
+        .eq('job_id', jobId)
+        .order('scene_number');
+    return rows.map(GeneratedVideoScene.fromJson).toList();
+  }
+
+  @override
+  Future<VideoGenerationJob?> getJobForLesson(String lessonId) async {
+    if (_client == null) return null;
+    final rows = await _client
+        .from('video_generation_jobs')
+        .select()
+        .eq('lesson_id', lessonId)
+        .order('created_at', ascending: false)
+        .limit(1);
+    if (rows.isEmpty) return null;
+    final job = Map<String, dynamic>.from(rows.first as Map);
+    return VideoGenerationJob.fromJson(job, scenes: await _scenesForJob(job['id'] as String));
+  }
+
+  @override
+  Stream<VideoGenerationJob?> watchJobForLesson(String lessonId) async* {
+    yield await getJobForLesson(lessonId);
+    if (_client == null) return;
+    yield* _client
+        .from('video_generation_jobs')
+        .stream(primaryKey: ['id'])
+        .eq('lesson_id', lessonId)
+        .order('created_at')
+        .asyncMap((rows) async {
+          if (rows.isEmpty) return null;
+          final job = Map<String, dynamic>.from(rows.last);
+          return VideoGenerationJob.fromJson(
+            job,
+            scenes: await _scenesForJob(job['id'] as String),
+          );
+        });
+  }
+
+  @override
+  Future<VideoGenerationJob> startGeneration(
+    Lesson lesson,
+    ChildProfile child,
+  ) => _service.startJob(lesson, child);
+
+  @override
+  Future<VideoGenerationJob> retry(String jobId, List<VideoScene> scenes) =>
+      _service.retryJob(jobId, scenes);
+}
+
+
 class LocalEducationalProvider implements AiLessonProvider {
   const LocalEducationalProvider();
 
@@ -670,5 +806,45 @@ class SupabaseAdminRepository implements AdminRepository {
     final allowed = {'children', 'reports', 'lessons', 'categories'};
     if (!allowed.contains(table)) throw ArgumentError.value(table, 'table');
     await _client?.from(table).delete().eq('id', id);
+  }
+}
+
+/// Word lookup contract used by the vocabulary explorer.
+abstract interface class DictionaryRepository {
+  Future<WordDefinition> lookup(String word);
+}
+
+/// Client for the free, keyless Dictionary API (https://dictionaryapi.dev).
+class FreeDictionaryRepository implements DictionaryRepository {
+  const FreeDictionaryRepository(this._client);
+  final http.Client _client;
+
+  static const _baseUrl = 'https://api.dictionaryapi.dev/api/v2/entries/en';
+
+  @override
+  Future<WordDefinition> lookup(String word) async {
+    final trimmed = word.trim().toLowerCase();
+    if (trimmed.isEmpty) {
+      throw const FormatException('Enter a word to look up.');
+    }
+    final uri = Uri.parse('$_baseUrl/${Uri.encodeComponent(trimmed)}');
+    final response = await _client
+        .get(uri)
+        .timeout(const Duration(seconds: 10));
+    if (response.statusCode == 404) {
+      throw Exception('No definition found for "$trimmed".');
+    }
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Dictionary service returned status ${response.statusCode}.',
+      );
+    }
+    final entries = jsonDecode(response.body) as List;
+    if (entries.isEmpty) {
+      throw Exception('No definition found for "$trimmed".');
+    }
+    return WordDefinition.fromJson(
+      Map<String, dynamic>.from(entries.first as Map),
+    );
   }
 }

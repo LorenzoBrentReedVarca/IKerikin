@@ -2,15 +2,13 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, range",
-  "Access-Control-Expose-Headers":
-    "accept-ranges, content-length, content-range, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const apiUrl = Deno.env.get("VIDEO_API_URL") ?? "https://api.openai.com/v1";
-const model = Deno.env.get("VIDEO_MODEL") ?? "sora-2";
-const apiKey = Deno.env.get("VIDEO_API_KEY") ?? Deno.env.get("AI_API_KEY");
+// Meshy AI Text to 3D — https://docs.meshy.ai/en/api/text-to-3d
+const apiUrl = Deno.env.get("MESHY_API_URL") ?? "https://api.meshy.ai";
+const aiModel = Deno.env.get("MESHY_MODEL") ?? "latest";
+const apiKey = Deno.env.get("MESHY_API_KEY");
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -19,30 +17,55 @@ function json(data: unknown, status = 200) {
   });
 }
 
-function providerHeaders() {
+async function meshyJson(path: string, init?: RequestInit) {
   if (!apiKey) {
-    throw new Error(
-      "VIDEO_API_KEY or AI_API_KEY is not configured in Supabase secrets.",
-    );
+    throw new Error("MESHY_API_KEY is not configured in Supabase secrets.");
   }
-  return { Authorization: `Bearer ${apiKey}` };
-}
-
-async function providerJson(path: string, init?: RequestInit) {
   const response = await fetch(`${apiUrl}${path}`, {
     ...init,
     headers: {
-      ...providerHeaders(),
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
       ...init?.headers,
     },
   });
   if (!response.ok) {
     throw new Error(
-      `Video provider error: ${response.status} ${await response.text()}`,
+      `Model provider error: ${response.status} ${await response.text()}`,
     );
   }
   return await response.json();
+}
+
+interface MeshyTask {
+  id: string;
+  type: string;
+  status: string;
+  progress?: number;
+  task_error?: { message?: string };
+  model_urls?: { glb?: string };
+}
+
+// Maps Meshy's task vocabulary onto the {id, status, progress} shape the Flutter app expects.
+function toGeneration(task: MeshyTask, stageOffset: number) {
+  const status = task.status === "SUCCEEDED"
+    ? "completed"
+    : task.status === "FAILED" || task.status === "CANCELED"
+    ? "failed"
+    : "in_progress";
+  return {
+    id: task.id,
+    status,
+    progress: status === "completed"
+      ? 100
+      : status === "failed"
+      ? 0
+      : stageOffset + Math.round((task.progress ?? 0) / 2),
+    error: status === "failed"
+      ? task.task_error?.message ?? "3D model generation failed."
+      : null,
+    model_url: status === "completed" ? task.model_urls?.glb : undefined,
+  };
 }
 
 serve(async (request) => {
@@ -51,80 +74,63 @@ serve(async (request) => {
   }
 
   try {
-    if (request.method === "GET") {
-      const url = new URL(request.url);
-      const videoId = url.searchParams.get("video_id");
-      if (url.searchParams.get("action") !== "content" || !videoId) {
-        return json({ error: "A video_id is required." }, 400);
-      }
-
-      const range = request.headers.get("range");
-      const response = await fetch(
-        `${apiUrl}/videos/${encodeURIComponent(videoId)}/content`,
-        {
-          headers: {
-            ...providerHeaders(),
-            ...(range ? { Range: range } : {}),
-          },
-        },
-      );
-      if (!response.ok) {
-        return json(
-          { error: `Unable to load video content (${response.status}).` },
-          response.status,
-        );
-      }
-
-      const headers = new Headers(corsHeaders);
-      for (const name of [
-        "accept-ranges",
-        "content-length",
-        "content-range",
-        "content-type",
-      ]) {
-        const value = response.headers.get(name);
-        if (value) headers.set(name, value);
-      }
-      headers.set("Content-Type", response.headers.get("content-type") ?? "video/mp4");
-      return new Response(response.body, { status: response.status, headers });
-    }
-
     const body = await request.json();
+
     if (body.action === "create") {
       const title = String(body.title ?? "Personalized lesson");
       const summary = String(body.summary ?? "");
-      const story = String(body.story ?? "").slice(0, 2400);
+      const story = String(body.story ?? "").slice(0, 300);
+      const preferences = body.child_preferences ?? {};
+      const interests = Array.isArray(preferences.interests)
+        ? preferences.interests.map(String).slice(0, 5).join(", ")
+        : "";
       const prompt = [
-        "Create a warm, colorful 3D animated educational short for children.",
-        "Use a fictional child character with no resemblance to a real person.",
-        "No on-screen text, logos, copyrighted characters, frightening imagery, or unsafe actions.",
-        "Show one clear learning action with gentle pacing, expressive gestures, natural sound, and an encouraging ending.",
+        "A warm, friendly 3D character or scene for a children's educational lesson.",
+        "A fictional character or object with no resemblance to a real person, gentle and non-frightening.",
+        "No on-screen text, logos, or copyrighted characters.",
+        interests ? `Inspired by these interests: ${interests}.` : "",
         `Lesson title: ${title}.`,
         `Learning objective: ${summary}.`,
-        `Story context: ${story}`,
-      ].join(" ");
-      return json(
-        await providerJson("/videos", {
-          method: "POST",
-          body: JSON.stringify({
-            model,
-            prompt,
-            size: "1280x720",
-            seconds: "8",
-          }),
+        story ? `Story context: ${story}` : "",
+      ].filter(Boolean).join(" ").slice(0, 600);
+
+      const created = await meshyJson("/openapi/v2/text-to-3d", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "preview",
+          prompt,
+          ai_model: aiModel,
+          moderation: true,
         }),
-      );
+      });
+      return json({ id: created.result, status: "in_progress", progress: 0, error: null });
     }
 
     if (body.action === "status" && body.video_id) {
-      return json(
-        await providerJson(
-          `/videos/${encodeURIComponent(String(body.video_id))}`,
-        ),
+      const task = await meshyJson(
+        `/openapi/v2/text-to-3d/${encodeURIComponent(String(body.video_id))}`,
       );
+
+      // Preview (untextured mesh) must succeed before texturing starts in a second, refine task.
+      if (task.type === "text-to-3d-preview") {
+        if (task.status === "SUCCEEDED") {
+          const refine = await meshyJson("/openapi/v2/text-to-3d", {
+            method: "POST",
+            body: JSON.stringify({
+              mode: "refine",
+              preview_task_id: task.id,
+              enable_pbr: true,
+            }),
+          });
+          return json({ id: refine.result, status: "in_progress", progress: 50, error: null });
+        }
+        return json(toGeneration(task, 0));
+      }
+
+      return json(toGeneration(task, 50));
     }
 
-    return json({ error: "Unsupported video action." }, 400);
+    return json({ error: "Unsupported model action." }, 400);
   } catch (error) {
     return json(
       { error: error instanceof Error ? error.message : "Unknown error" },

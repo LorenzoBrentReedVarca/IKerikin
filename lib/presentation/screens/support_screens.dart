@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../application/providers.dart';
 import '../../core/accessibility/accessibility_settings.dart';
+import '../../core/theme/app_theme.dart';
 import '../../domain/models.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/decorative_scenes.dart';
 import 'learning_screens.dart';
 
 /// Child progress dashboard with weekly and monthly trends.
@@ -22,226 +24,520 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authStateProvider).value;
     final child = activeChild(ref);
+    final children = user == null
+        ? const <ChildProfile>[]
+        : ref.watch(childrenProvider(user.id)).value ?? const <ChildProfile>[];
     final lessons = child == null
         ? const <Lesson>[]
         : ref.watch(lessonsProvider(child.id)).value ?? const <Lesson>[];
     return Scaffold(
-      appBar: AppBar(title: const Text('Progress Dashboard')),
-      body: ResponsiveBody(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: child == null
-            ? const EmptyState(
-                icon: Icons.insights_rounded,
-                title: 'No progress yet',
-                message:
-                    'Select or create a child profile to track learning progress.',
-              )
-            : ref
-                  .watch(progressProvider(child.id))
-                  .when(
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (error, _) => ErrorView(
-                      message: error.toString(),
-                      onRetry: () => ref.invalidate(progressProvider(child.id)),
-                    ),
-                    data: (progress) => RefreshIndicator(
-                      onRefresh: () async =>
-                          ref.invalidate(progressProvider(child.id)),
-                      child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          SegmentedButton<String>(
-                            segments: const [
-                              ButtonSegment(
-                                value: 'Weekly',
-                                label: Text('Weekly'),
-                              ),
-                              ButtonSegment(
-                                value: 'Monthly',
-                                label: Text('Monthly'),
-                              ),
-                              ButtonSegment(
-                                value: 'All Time',
-                                label: Text('All Time'),
-                              ),
-                            ],
-                            selected: {_period},
-                            onSelectionChanged: (periods) =>
-                                setState(() => _period = periods.first),
-                          ),
-                          const SizedBox(height: 14),
-                          Card(
-                            color: const Color(0xFFF8F4FF),
-                            child: ListTile(
-                              leading: ChildAvatar(
-                                name: child.name,
-                                photoUrl: child.photoUrl,
-                              ),
-                              title: Text(
-                                child.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                              subtitle: Text(
-                                'Age ${child.age} • ${child.gender}',
-                              ),
-                              trailing: TextButton(
-                                onPressed: () => context.go('/profile'),
-                                child: const Text('Change Child'),
-                              ),
+      backgroundColor: Colors.transparent,
+      body: SceneBackground(
+        scene: SceneKind.progress,
+        child: ResponsiveBody(
+          maxWidth: 1180,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: child == null
+              ? const EmptyState(
+                  icon: Icons.insights_rounded,
+                  title: 'No progress yet',
+                  message:
+                      'Select or create a child profile to track learning progress.',
+                )
+              : ref
+                    .watch(progressProvider(child.id))
+                    .when(
+                      loading: () =>
+                          const LoadingView(message: 'Loading progress…'),
+                      error: (error, _) => ErrorView(
+                        message: error.toString(),
+                        onRetry: () => ref.invalidate(progressProvider(child.id)),
+                      ),
+                      data: (progress) => RefreshIndicator(
+                        onRefresh: () async =>
+                            ref.invalidate(progressProvider(child.id)),
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            HeroBanner(
+                              icon: Icons.insights_rounded,
+                              title: 'Progress',
+                              colorfulTitle: true,
+                              subtitle:
+                                  'A calm view of what ${child.name} has practiced and what comes next.',
                             ),
-                          ),
-                          const SizedBox(height: 14),
-                          ResponsiveGrid(
-                            minItemWidth: 140,
-                            childAspectRatio: 1.15,
-                            children: [
-                              MetricCard(
-                                icon: Icons.task_alt_rounded,
-                                value: '${progress.completedLessons}',
-                                label: 'Completed',
-                              ),
-                              MetricCard(
-                                icon: Icons.quiz_rounded,
-                                value: '${progress.averageQuizScore.round()}%',
-                                label: 'Quiz average',
-                                color: Colors.teal,
-                              ),
-                              MetricCard(
-                                icon: Icons.star_rounded,
-                                value: '${progress.xp}',
-                                label: 'XP earned',
-                                color: Colors.amber,
-                              ),
-                              MetricCard(
-                                icon: Icons.monetization_on_rounded,
-                                value: '${progress.coins}',
-                                label: 'Coins earned',
-                                color: Colors.orange,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          if (_period == 'Weekly')
-                            _BarSection(
-                              title: 'Minutes learned this week',
-                              labels: const ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
-                              values: progress.weeklyMinutes,
-                              suffix: 'm',
-                            )
-                          else if (_period == 'Monthly')
-                            _BarSection(
-                              title: 'Lessons completed by week',
-                              labels: const ['W1', 'W2', 'W3', 'W4'],
-                              values: progress.monthlyCompletions,
-                              suffix: '',
-                            )
-                          else
-                            _AllTimeSummary(progress: progress),
-                          const SizedBox(height: 12),
-                          ResponsiveGrid(
-                            minItemWidth: 180,
-                            childAspectRatio: 1.75,
-                            children: [
-                              MetricCard(
-                                icon: Icons.timer_rounded,
-                                value: '${progress.timeSpentMinutes}m',
-                                label: 'Time spent',
-                                color: Colors.blue,
-                              ),
-                              MetricCard(
-                                icon: Icons.task_alt_rounded,
-                                value: '${progress.completedToday}',
-                                label: 'Activities today',
-                                color: Colors.green,
-                              ),
-                              MetricCard(
-                                icon: Icons.local_fire_department_rounded,
-                                value: '${progress.streakDays}',
-                                label: 'Day streak',
-                                color: Colors.deepOrange,
-                              ),
-                              MetricCard(
-                                icon: Icons.workspace_premium_rounded,
-                                value: '${progress.badges.length}',
-                                label: 'Badges earned',
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Badges',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const SizedBox(height: 8),
-                          if (progress.badges.isEmpty)
-                            const Card(
-                              child: ListTile(
-                                leading: Icon(Icons.lock_outline_rounded),
-                                title: Text('First Step is ready to unlock'),
-                                subtitle: Text(
-                                  'Complete one lesson to earn it.',
-                                ),
-                              ),
-                            )
-                          else
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: progress.badges
-                                  .map(
-                                    (badge) => Chip(
-                                      avatar: const Icon(
-                                        Icons.workspace_premium_rounded,
-                                      ),
-                                      label: Text(badge),
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
-                          if (lessons.isNotEmpty) ...[
                             const SizedBox(height: 18),
-                            const SectionHeading(
-                              title: 'Recommended Next Lesson',
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final learnerColumn = _ProgressLearnerColumn(
+                                  child: child,
+                                  children: children,
+                                  completedToday: progress.completedToday,
+                                );
+                                final recordColumn = _ProgressRecordColumn(
+                                  child: child,
+                                  progress: progress,
+                                  period: _period,
+                                  onPeriodChanged: (value) =>
+                                      setState(() => _period = value),
+                                  nextLesson: lessons.firstOrNull,
+                                );
+                                if (constraints.maxWidth < 820) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      learnerColumn,
+                                      const SizedBox(height: 26),
+                                      recordColumn,
+                                    ],
+                                  );
+                                }
+                                return Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    SizedBox(
+                                      width: 260,
+                                      child: learnerColumn,
+                                    ),
+                                    const SizedBox(width: 36),
+                                    Expanded(child: recordColumn),
+                                  ],
+                                );
+                              },
                             ),
                             const SizedBox(height: 8),
-                            Card(
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.all(14),
-                                leading: const CircleAvatar(
-                                  backgroundColor: Color(0xFFE9E0FF),
-                                  child: Icon(Icons.menu_book_rounded),
-                                ),
-                                title: Text(
-                                  lessons.first.content.title,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  '${lessons.first.request.difficulty.name} • ${lessons.first.request.durationMinutes} min\n${lessons.first.content.summary}',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                trailing: FilledButton(
-                                  onPressed: () => context.push(
-                                    '/lesson/${lessons.first.id}',
-                                    extra: lessons.first,
-                                  ),
-                                  child: const Text('Start'),
-                                ),
-                              ),
-                            ),
                           ],
-                          const SizedBox(height: 18),
+                        ),
+                      ),
+                    ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Selected learner" panel plus today's activity count, echoing the
+/// Kombai "Story Path Evidence" progress concept.
+class _ProgressLearnerColumn extends ConsumerWidget {
+  const _ProgressLearnerColumn({
+    required this.child,
+    required this.children,
+    required this.completedToday,
+  });
+  final ChildProfile child;
+  final List<ChildProfile> children;
+  final int completedToday;
+
+  static const _dailyTarget = 3;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final done = completedToday.clamp(0, _dailyTarget);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'SELECTED LEARNER',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.4,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(AppTheme.radius),
+            border: Border.all(color: theme.colorScheme.outlineVariant),
+            boxShadow: AppTheme.softShadow(context),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  ChildAvatar(
+                    name: child.name,
+                    photoUrl: child.photoUrl,
+                    radius: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          child.name,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${timeOfDayGreeting()}, learner.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (children.length > 1) ...[
+                const SizedBox(height: 14),
+                Material(
+                  color: theme.colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(AppTheme.radius),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(AppTheme.radius),
+                    onTap: () => pickChildSheet(
+                      context,
+                      ref,
+                      currentChildId: child.id,
+                      children: children,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Switch learner',
+                              style: TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ],
                       ),
                     ),
                   ),
-      ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'TODAY',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.4,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedCounter(
+              value: completedToday,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w900,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'activities today',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            for (var i = 0; i < _dailyTarget; i++) ...[
+              if (i > 0) const SizedBox(width: 6),
+              Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 320),
+                  curve: Curves.easeOut,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: i < done
+                        ? AppTheme.brandTeal
+                        : theme.colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Today’s count is shown separately from the longer-term record.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Period selector, trend chart, evidence grid, and next-lesson
+/// recommendation, echoing the Kombai "Story Path Evidence" progress
+/// concept.
+class _ProgressRecordColumn extends StatelessWidget {
+  const _ProgressRecordColumn({
+    required this.child,
+    required this.progress,
+    required this.period,
+    required this.onPeriodChanged,
+    required this.nextLesson,
+  });
+  final ChildProfile child;
+  final ProgressSummary progress;
+  final String period;
+  final ValueChanged<String> onPeriodChanged;
+  final Lesson? nextLesson;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'LEARNING RECORD',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Learning progress for ${child.name}',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => context.go('/profile'),
+              icon: const Icon(Icons.north_east_rounded, size: 16),
+              label: const Text(
+                'View profile',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'Weekly', label: Text('Weekly')),
+            ButtonSegment(value: 'Monthly', label: Text('Monthly')),
+            ButtonSegment(value: 'All Time', label: Text('All time')),
+          ],
+          selected: {period},
+          showSelectedIcon: false,
+          onSelectionChanged: (values) => onPeriodChanged(values.first),
+        ),
+        const SizedBox(height: 18),
+        if (period == 'Weekly')
+          _BarSection(
+            title: 'Minutes learned this week',
+            labels: const ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+            values: progress.weeklyMinutes,
+            suffix: 'm',
+          )
+        else if (period == 'Monthly')
+          _BarSection(
+            title: 'Lessons completed by week',
+            labels: const ['W1', 'W2', 'W3', 'W4'],
+            values: progress.monthlyCompletions,
+            suffix: '',
+          )
+        else
+          _AllTimeSummary(progress: progress),
+        const SizedBox(height: 24),
+        Text(
+          'What this record shows',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ResponsiveGrid(
+          minItemWidth: 140,
+          itemHeight: 136,
+          children: [
+            MetricCard(
+              icon: Icons.task_alt_rounded,
+              value: '${progress.completedLessons}',
+              label: 'Lessons completed',
+            ),
+            MetricCard(
+              icon: Icons.quiz_rounded,
+              value: '${progress.averageQuizScore.round()}%',
+              label: 'Quiz average',
+              color: Colors.teal,
+            ),
+            MetricCard(
+              icon: Icons.star_rounded,
+              value: '${progress.xp}',
+              label: 'XP earned',
+              color: Colors.amber,
+            ),
+            MetricCard(
+              icon: Icons.monetization_on_rounded,
+              value: '${progress.coins}',
+              label: 'Coins earned',
+              color: Colors.orange,
+            ),
+            MetricCard(
+              icon: Icons.local_fire_department_rounded,
+              value: '${progress.streakDays} days',
+              label: 'Current streak',
+              color: Colors.deepOrange,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Badges',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (progress.badges.isEmpty)
+          const Card(
+            child: ListTile(
+              leading: Icon(Icons.lock_outline_rounded),
+              title: Text('First Step is ready to unlock'),
+              subtitle: Text('Complete one lesson to earn it.'),
+            ),
+          )
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: progress.badges
+                .map(
+                  (badge) => Chip(
+                    avatar: const Icon(Icons.workspace_premium_rounded),
+                    label: Text(badge),
+                  ),
+                )
+                .toList(),
+          ),
+        if (nextLesson != null) ...[
+          const SizedBox(height: 24),
+          HoverLift(
+            child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.radius),
+              border: Border.all(color: theme.colorScheme.outlineVariant),
+              boxShadow: AppTheme.softShadow(context),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'RECOMMENDED NEXT LESSON',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppTheme.brandViolet,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        nextLesson!.content.title,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        nextLesson!.content.summary,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 4,
+                        children: [
+                          Text(
+                            nextLesson!.request.difficulty.name,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            '${nextLesson!.request.durationMinutes} min',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                BouncyTap(
+                  scale: .97,
+                  child: FilledButton.icon(
+                    onPressed: () => context.push(
+                      '/lesson/${nextLesson!.id}',
+                      extra: nextLesson,
+                    ),
+                    icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                    label: const Text('Open lesson'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ),
+        ],
+        const SizedBox(height: 8),
+      ],
     );
   }
 }
@@ -333,42 +629,70 @@ class _BarSection extends StatelessWidget {
             Text(title, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 18),
             SizedBox(
-              height: 150,
+              height: 160,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: values.indexed
                     .map(
                       (entry) => Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text(
-                                '${entry.$2}$suffix',
-                                style: const TextStyle(fontSize: 10),
-                              ),
-                              const SizedBox(height: 4),
-                              Flexible(
-                                child: FractionallySizedBox(
-                                  heightFactor: entry.$2 == 0
-                                      ? .03
-                                      : entry.$2 / max,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
-                                      borderRadius: const BorderRadius.vertical(
-                                        top: Radius.circular(8),
+                        child: Semantics(
+                          label:
+                              '${labels[entry.$1]}: ${entry.$2}${suffix.isEmpty ? '' : ' $suffix'}',
+                          excludeSemantics: true,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '${entry.$2}$suffix',
+                                  style: Theme.of(context).textTheme.labelSmall,
+                                ),
+                                const SizedBox(height: 4),
+                                Flexible(
+                                  child: TweenAnimationBuilder<double>(
+                                    key: ValueKey('${entry.$1}-${entry.$2}'),
+                                    tween: Tween(
+                                      begin: 0,
+                                      end: entry.$2 == 0
+                                          ? .03
+                                          : entry.$2 / max,
+                                    ),
+                                    duration: const Duration(
+                                      milliseconds: 700,
+                                    ),
+                                    curve: Curves.easeOutCubic,
+                                    builder: (context, heightFactor, child) =>
+                                        FractionallySizedBox(
+                                          heightFactor: heightFactor,
+                                          child: child,
+                                        ),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: entry.$2 == 0
+                                            ? Theme.of(
+                                                context,
+                                              ).colorScheme.outlineVariant
+                                            : Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                        borderRadius:
+                                            const BorderRadius.vertical(
+                                              top: Radius.circular(8),
+                                            ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(labels[entry.$1]),
-                            ],
+                                const SizedBox(height: 6),
+                                Text(
+                                  labels[entry.$1],
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.labelMedium,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -399,11 +723,11 @@ class SettingsScreen extends ConsumerWidget {
         maxWidth: 760,
         child: ListView(
           children: [
-            Text(
-              'Accessibility',
-              style: Theme.of(context).textTheme.headlineSmall,
+            const SectionHeading(
+              title: 'Reading & vision',
+              subtitle: 'Make text and colors easier to see',
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Card(
               child: Column(
                 children: [
@@ -437,6 +761,18 @@ class SettingsScreen extends ConsumerWidget {
                     value: settings.darkMode,
                     onChanged: (v) => update(settings.copyWith(darkMode: v)),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            const SectionHeading(
+              title: 'Sound & motion',
+              subtitle: 'Control audio support and animations',
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: Column(
+                children: [
                   _SettingSwitch(
                     icon: Icons.motion_photos_off_rounded,
                     title: 'Reduced motion',
@@ -462,14 +798,6 @@ class SettingsScreen extends ConsumerWidget {
                         update(settings.copyWith(textToSpeech: v)),
                   ),
                   _SettingSwitch(
-                    icon: Icons.touch_app_rounded,
-                    title: 'Large buttons',
-                    subtitle: 'Increase interactive target sizes',
-                    value: settings.largeButtons,
-                    onChanged: (v) =>
-                        update(settings.copyWith(largeButtons: v)),
-                  ),
-                  _SettingSwitch(
                     icon: Icons.closed_caption_rounded,
                     title: 'Closed captions',
                     subtitle: 'Show captions for future media lessons',
@@ -480,9 +808,27 @@ class SettingsScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            Text('Language', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 10),
+            const SizedBox(height: 18),
+            const SectionHeading(
+              title: 'Touch',
+              subtitle: 'Adjust how big the controls are',
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: _SettingSwitch(
+                icon: Icons.touch_app_rounded,
+                title: 'Large buttons',
+                subtitle: 'Increase interactive target sizes',
+                value: settings.largeButtons,
+                onChanged: (v) => update(settings.copyWith(largeButtons: v)),
+              ),
+            ),
+            const SizedBox(height: 18),
+            const SectionHeading(
+              title: 'Language',
+              subtitle: 'Choose the language used across the app',
+            ),
+            const SizedBox(height: 8),
             Card(
               child: Column(
                 children: [
@@ -505,7 +851,7 @@ class SettingsScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
             OutlinedButton.icon(
               onPressed: () async {
                 await FlutterTts().speak(
@@ -518,6 +864,27 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 10),
             FilledButton.tonalIcon(
               onPressed: () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    icon: const Icon(Icons.logout_rounded),
+                    title: const Text('Sign out?'),
+                    content: const Text(
+                      'You will need to sign in again to reach your child profiles and lessons.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext, false),
+                        child: const Text('Stay signed in'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(dialogContext, true),
+                        child: const Text('Sign out'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed != true) return;
                 await ref.read(authControllerProvider.notifier).signOut();
                 if (context.mounted) context.go('/login');
               },
@@ -525,9 +892,16 @@ class SettingsScreen extends ConsumerWidget {
               label: const Text('Sign out'),
             ),
             const SizedBox(height: 24),
-            const Center(
-              child: Text('IKeriKin 1.0.0 • Made with care in the Philippines'),
+            Center(
+              child: Text(
+                'IKeriKin 1.0.0 • Made with care in the Philippines',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
             ),
+            const SizedBox(height: 12),
           ],
         ),
       ),
@@ -571,8 +945,9 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).value;
     if (user?.role != UserRole.administrator)
-      return const Scaffold(
-        body: EmptyState(
+      return Scaffold(
+        appBar: AppBar(),
+        body: const EmptyState(
           icon: Icons.admin_panel_settings_outlined,
           title: 'Administrator access required',
           message: 'This area is protected by role-based access policies.',
@@ -583,18 +958,16 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       appBar: AppBar(title: const Text('IKeriKin Administration')),
       body: ResponsiveBody(
         child: metrics.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const LoadingView(message: 'Loading metrics…'),
           error: (error, _) => ErrorView(
             message: error.toString(),
             onRetry: () => ref.invalidate(adminMetricsProvider),
           ),
           data: (data) => ListView(
             children: [
-              GridView.count(
-                crossAxisCount: MediaQuery.sizeOf(context).width > 800 ? 5 : 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: 1.25,
+              ResponsiveGrid(
+                minItemWidth: 150,
+                itemHeight: 136,
                 children: [
                   MetricCard(
                     icon: Icons.people_rounded,
@@ -644,7 +1017,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                   if (snapshot.hasError)
                     return ErrorView(message: snapshot.error.toString());
                   if (!snapshot.hasData)
-                    return const Center(child: CircularProgressIndicator());
+                    return const LoadingView(message: 'Loading records…');
                   if (snapshot.data!.isEmpty)
                     return const EmptyState(
                       icon: Icons.inbox_rounded,
@@ -674,7 +1047,39 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                                   ? null
                                   : IconButton(
                                       icon: const Icon(Icons.delete_outline),
+                                      tooltip: 'Delete record',
                                       onPressed: () async {
+                                        final confirmed = await showDialog<bool>(
+                                          context: context,
+                                          builder: (dialogContext) => AlertDialog(
+                                            icon: const Icon(
+                                              Icons.delete_outline_rounded,
+                                            ),
+                                            title: const Text(
+                                              'Delete this record?',
+                                            ),
+                                            content: const Text(
+                                              'This action cannot be undone.',
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(
+                                                  dialogContext,
+                                                  false,
+                                                ),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              FilledButton(
+                                                onPressed: () => Navigator.pop(
+                                                  dialogContext,
+                                                  true,
+                                                ),
+                                                child: const Text('Delete'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        if (confirmed != true) return;
                                         await ref
                                             .read(adminRepositoryProvider)
                                             .deleteRecord(

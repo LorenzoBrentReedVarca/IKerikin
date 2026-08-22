@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Centralized build-time configuration for IKeriKin.
@@ -8,11 +9,18 @@ abstract final class AppConfig {
   /// Supabase anonymous key supplied with `--dart-define=SUPABASE_ANON_KEY=...`.
   static const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
-  /// Public URL used by OAuth and password reset deep links.
-  static const redirectUrl = String.fromEnvironment(
+  static const _redirectUrlDefine = String.fromEnvironment(
     'AUTH_REDIRECT_URL',
     defaultValue: 'ph.ikerikin.ikerikin://auth-callback',
   );
+
+  /// Public URL used by OAuth and password reset deep links.
+  ///
+  /// The custom app scheme only resolves on Android/iOS. On web there is no
+  /// installed app to catch it, so redirects must land back on the site's own
+  /// origin, which Supabase parses from the URL fragment automatically.
+  static String get redirectUrl =>
+      kIsWeb ? Uri.base.origin : _redirectUrlDefine;
 
   /// Edge Function name that safely calls the configured AI provider.
   static const aiFunctionName = String.fromEnvironment(

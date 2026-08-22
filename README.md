@@ -19,6 +19,8 @@ from each learner's profile and goals.
 - Weekly, monthly, and all-time progress views
 - Large text, dyslexia-friendly font, high contrast, and reduced motion settings
 - Optional Supabase authentication, persistence, storage, and Edge Functions
+- Full CRUD child profile management — see [docs/CRUD_IMPLEMENTATION.md](docs/CRUD_IMPLEMENTATION.md)
+- Word Explorer vocabulary lookup via the Free Dictionary API — see [docs/API_INTEGRATION.md](docs/API_INTEGRATION.md)
 
 ## Project Structure
 
@@ -61,13 +63,15 @@ Keep provider secrets in Supabase, never in Flutter source or Dart defines.
 
 ```powershell
 supabase secrets set AI_API_KEY=your_provider_key
+supabase secrets set MESHY_API_KEY=your_meshy_api_key
 supabase functions deploy generate-lesson
 supabase functions deploy generate-video
 ```
 
-The video provider is isolated behind the `generate-video` function so it can
-be replaced without changing Flutter playback. OpenAI's Sora 2 Videos API is
-currently scheduled for shutdown on September 24, 2026.
+The 3D asset provider is isolated behind the `generate-video` function so it
+can be replaced without changing Flutter playback. It calls the Meshy AI Text
+to 3D API (`MESHY_API_KEY`, required) and returns a textured GLB model, which
+the app renders with an interactive 3D viewer instead of a video player.
 
 ## Validation
 
