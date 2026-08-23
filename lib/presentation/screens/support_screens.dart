@@ -37,7 +37,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
       body: SceneBackground(
         scene: SceneKind.progress,
         child: ResponsiveBody(
-          maxWidth: 1180,
+          maxWidth: 1600,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: child == null
               ? const EmptyState(
@@ -53,7 +53,8 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                           const LoadingView(message: 'Loading progress…'),
                       error: (error, _) => ErrorView(
                         message: error.toString(),
-                        onRetry: () => ref.invalidate(progressProvider(child.id)),
+                        onRetry: () =>
+                            ref.invalidate(progressProvider(child.id)),
                       ),
                       data: (progress) => RefreshIndicator(
                         onRefresh: () async =>
@@ -96,13 +97,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                                   );
                                 }
                                 return Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    SizedBox(
-                                      width: 260,
-                                      child: learnerColumn,
-                                    ),
+                                    SizedBox(width: 260, child: learnerColumn),
                                     const SizedBox(width: 36),
                                     Expanded(child: recordColumn),
                                   ],
@@ -166,6 +163,7 @@ class _ProgressLearnerColumn extends ConsumerWidget {
                   ChildAvatar(
                     name: child.name,
                     photoUrl: child.photoUrl,
+                    gender: child.gender,
                     radius: 24,
                   ),
                   const SizedBox(width: 12),
@@ -457,83 +455,86 @@ class _ProgressRecordColumn extends StatelessWidget {
           const SizedBox(height: 24),
           HoverLift(
             child: Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(AppTheme.radius),
-              border: Border.all(color: theme.colorScheme.outlineVariant),
-              boxShadow: AppTheme.softShadow(context),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'RECOMMENDED NEXT LESSON',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppTheme.brandViolet,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        nextLesson!.content.title,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        nextLesson!.content.summary,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 4,
-                        children: [
-                          Text(
-                            nextLesson!.request.difficulty.name,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w800,
-                            ),
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(AppTheme.radius),
+                border: Border.all(color: theme.colorScheme.outlineVariant),
+                boxShadow: AppTheme.softShadow(context),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'RECOMMENDED NEXT LESSON',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppTheme.brandViolet,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.2,
                           ),
-                          Text(
-                            '${nextLesson!.request.durationMinutes} min',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w800,
-                            ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          nextLesson!.content.title,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w900,
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                BouncyTap(
-                  scale: .97,
-                  child: FilledButton.icon(
-                    onPressed: () => context.push(
-                      '/lesson/${nextLesson!.id}',
-                      extra: nextLesson,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          nextLesson!.content.summary,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 4,
+                          children: [
+                            Text(
+                              nextLesson!.request.difficulty.name,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Text(
+                              '${nextLesson!.request.durationMinutes} min',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                    label: const Text('Open lesson'),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  BouncyTap(
+                    scale: .97,
+                    child: FilledButton.icon(
+                      onPressed: () => context.push(
+                        '/lesson/${nextLesson!.id}',
+                        extra: nextLesson,
+                      ),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, 44),
+                      ),
+                      icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                      label: const Text('Open lesson'),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
           ),
         ],
         const SizedBox(height: 8),
@@ -654,13 +655,9 @@ class _BarSection extends StatelessWidget {
                                     key: ValueKey('${entry.$1}-${entry.$2}'),
                                     tween: Tween(
                                       begin: 0,
-                                      end: entry.$2 == 0
-                                          ? .03
-                                          : entry.$2 / max,
+                                      end: entry.$2 == 0 ? .03 : entry.$2 / max,
                                     ),
-                                    duration: const Duration(
-                                      milliseconds: 700,
-                                    ),
+                                    duration: const Duration(milliseconds: 700),
                                     curve: Curves.easeOutCubic,
                                     builder: (context, heightFactor, child) =>
                                         FractionallySizedBox(
@@ -718,191 +715,204 @@ class SettingsScreen extends ConsumerWidget {
     void update(AccessibilitySettings value) =>
         ref.read(accessibilityProvider.notifier).update(value);
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings & accessibility')),
-      body: ResponsiveBody(
-        maxWidth: 760,
-        child: ListView(
-          children: [
-            const SectionHeading(
-              title: 'Reading & vision',
-              subtitle: 'Make text and colors easier to see',
-            ),
-            const SizedBox(height: 8),
-            Card(
-              child: Column(
-                children: [
-                  _SettingSwitch(
-                    icon: Icons.format_size_rounded,
-                    title: 'Large fonts',
-                    subtitle: 'Increase text throughout the app',
-                    value: settings.largeFonts,
-                    onChanged: (v) => update(settings.copyWith(largeFonts: v)),
-                  ),
-                  _SettingSwitch(
-                    icon: Icons.text_fields_rounded,
-                    title: 'Dyslexia-friendly font',
-                    subtitle: 'Use Atkinson Hyperlegible',
-                    value: settings.dyslexiaFont,
-                    onChanged: (v) =>
-                        update(settings.copyWith(dyslexiaFont: v)),
-                  ),
-                  _SettingSwitch(
-                    icon: Icons.contrast_rounded,
-                    title: 'High contrast',
-                    subtitle: 'Increase color and border contrast',
-                    value: settings.highContrast,
-                    onChanged: (v) =>
-                        update(settings.copyWith(highContrast: v)),
-                  ),
-                  _SettingSwitch(
-                    icon: Icons.dark_mode_rounded,
-                    title: 'Dark mode',
-                    subtitle: 'Use a low-light color theme',
-                    value: settings.darkMode,
-                    onChanged: (v) => update(settings.copyWith(darkMode: v)),
-                  ),
-                ],
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+      body: AuroraBackground(
+        child: ResponsiveBody(
+          maxWidth: 900,
+          padding: const EdgeInsets.fromLTRB(20, 80, 20, 20),
+          child: ListView(
+            children: [
+              const HeroBanner(
+                icon: Icons.settings_outlined,
+                title: 'Settings & accessibility',
+                colorfulTitle: true,
+                subtitle: 'Tune how IKeriKin looks, sounds, and responds.',
               ),
-            ),
-            const SizedBox(height: 18),
-            const SectionHeading(
-              title: 'Sound & motion',
-              subtitle: 'Control audio support and animations',
-            ),
-            const SizedBox(height: 8),
-            Card(
-              child: Column(
-                children: [
-                  _SettingSwitch(
-                    icon: Icons.motion_photos_off_rounded,
-                    title: 'Reduced motion',
-                    subtitle: 'Remove page transition animations',
-                    value: settings.reducedMotion,
-                    onChanged: (v) =>
-                        update(settings.copyWith(reducedMotion: v)),
-                  ),
-                  _SettingSwitch(
-                    icon: Icons.record_voice_over_rounded,
-                    title: 'Voice navigation',
-                    subtitle: 'Enable spoken navigation support',
-                    value: settings.voiceNavigation,
-                    onChanged: (v) =>
-                        update(settings.copyWith(voiceNavigation: v)),
-                  ),
-                  _SettingSwitch(
-                    icon: Icons.volume_up_rounded,
-                    title: 'Text to speech',
-                    subtitle: 'Read lesson content aloud',
-                    value: settings.textToSpeech,
-                    onChanged: (v) =>
-                        update(settings.copyWith(textToSpeech: v)),
-                  ),
-                  _SettingSwitch(
-                    icon: Icons.closed_caption_rounded,
-                    title: 'Closed captions',
-                    subtitle: 'Show captions for future media lessons',
-                    value: settings.closedCaptions,
-                    onChanged: (v) =>
-                        update(settings.copyWith(closedCaptions: v)),
-                  ),
-                ],
+              const SizedBox(height: 16),
+              const SectionHeading(
+                title: 'Reading & vision',
+                subtitle: 'Make text and colors easier to see',
               ),
-            ),
-            const SizedBox(height: 18),
-            const SectionHeading(
-              title: 'Touch',
-              subtitle: 'Adjust how big the controls are',
-            ),
-            const SizedBox(height: 8),
-            Card(
-              child: _SettingSwitch(
-                icon: Icons.touch_app_rounded,
-                title: 'Large buttons',
-                subtitle: 'Increase interactive target sizes',
-                value: settings.largeButtons,
-                onChanged: (v) => update(settings.copyWith(largeButtons: v)),
-              ),
-            ),
-            const SizedBox(height: 18),
-            const SectionHeading(
-              title: 'Language',
-              subtitle: 'Choose the language used across the app',
-            ),
-            const SizedBox(height: 8),
-            Card(
-              child: Column(
-                children: [
-                  RadioListTile<String>(
-                    value: 'en',
-                    groupValue: locale.languageCode,
-                    title: const Text('English'),
-                    onChanged: (value) => ref
-                        .read(localeProvider.notifier)
-                        .setLocale(Locale(value!)),
-                  ),
-                  RadioListTile<String>(
-                    value: 'fil',
-                    groupValue: locale.languageCode,
-                    title: const Text('Filipino'),
-                    onChanged: (value) => ref
-                        .read(localeProvider.notifier)
-                        .setLocale(Locale(value!)),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 22),
-            OutlinedButton.icon(
-              onPressed: () async {
-                await FlutterTts().speak(
-                  'Welcome to IKeriKin. Your accessibility settings are ready.',
-                );
-              },
-              icon: const Icon(Icons.hearing_rounded),
-              label: const Text('Test text to speech'),
-            ),
-            const SizedBox(height: 10),
-            FilledButton.tonalIcon(
-              onPressed: () async {
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (dialogContext) => AlertDialog(
-                    icon: const Icon(Icons.logout_rounded),
-                    title: const Text('Sign out?'),
-                    content: const Text(
-                      'You will need to sign in again to reach your child profiles and lessons.',
+              const SizedBox(height: 8),
+              Card(
+                child: Column(
+                  children: [
+                    _SettingSwitch(
+                      icon: Icons.format_size_rounded,
+                      title: 'Large fonts',
+                      subtitle: 'Increase text throughout the app',
+                      value: settings.largeFonts,
+                      onChanged: (v) =>
+                          update(settings.copyWith(largeFonts: v)),
                     ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(dialogContext, false),
-                        child: const Text('Stay signed in'),
-                      ),
-                      FilledButton(
-                        onPressed: () => Navigator.pop(dialogContext, true),
-                        child: const Text('Sign out'),
-                      ),
-                    ],
-                  ),
-                );
-                if (confirmed != true) return;
-                await ref.read(authControllerProvider.notifier).signOut();
-                if (context.mounted) context.go('/login');
-              },
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Sign out'),
-            ),
-            const SizedBox(height: 24),
-            Center(
-              child: Text(
-                'IKeriKin 1.0.0 • Made with care in the Philippines',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    _SettingSwitch(
+                      icon: Icons.text_fields_rounded,
+                      title: 'Dyslexia-friendly font',
+                      subtitle: 'Use Atkinson Hyperlegible',
+                      value: settings.dyslexiaFont,
+                      onChanged: (v) =>
+                          update(settings.copyWith(dyslexiaFont: v)),
+                    ),
+                    _SettingSwitch(
+                      icon: Icons.contrast_rounded,
+                      title: 'High contrast',
+                      subtitle: 'Increase color and border contrast',
+                      value: settings.highContrast,
+                      onChanged: (v) =>
+                          update(settings.copyWith(highContrast: v)),
+                    ),
+                    _SettingSwitch(
+                      icon: Icons.dark_mode_rounded,
+                      title: 'Dark mode',
+                      subtitle: 'Use a low-light color theme',
+                      value: settings.darkMode,
+                      onChanged: (v) => update(settings.copyWith(darkMode: v)),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-          ],
+              const SizedBox(height: 18),
+              const SectionHeading(
+                title: 'Sound & motion',
+                subtitle: 'Control audio support and animations',
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: Column(
+                  children: [
+                    _SettingSwitch(
+                      icon: Icons.motion_photos_off_rounded,
+                      title: 'Reduced motion',
+                      subtitle: 'Remove page transition animations',
+                      value: settings.reducedMotion,
+                      onChanged: (v) =>
+                          update(settings.copyWith(reducedMotion: v)),
+                    ),
+                    _SettingSwitch(
+                      icon: Icons.record_voice_over_rounded,
+                      title: 'Voice navigation',
+                      subtitle: 'Enable spoken navigation support',
+                      value: settings.voiceNavigation,
+                      onChanged: (v) =>
+                          update(settings.copyWith(voiceNavigation: v)),
+                    ),
+                    _SettingSwitch(
+                      icon: Icons.volume_up_rounded,
+                      title: 'Text to speech',
+                      subtitle: 'Read lesson content aloud',
+                      value: settings.textToSpeech,
+                      onChanged: (v) =>
+                          update(settings.copyWith(textToSpeech: v)),
+                    ),
+                    _SettingSwitch(
+                      icon: Icons.closed_caption_rounded,
+                      title: 'Closed captions',
+                      subtitle: 'Show captions for future media lessons',
+                      value: settings.closedCaptions,
+                      onChanged: (v) =>
+                          update(settings.copyWith(closedCaptions: v)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              const SectionHeading(
+                title: 'Touch',
+                subtitle: 'Adjust how big the controls are',
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: _SettingSwitch(
+                  icon: Icons.touch_app_rounded,
+                  title: 'Large buttons',
+                  subtitle: 'Increase interactive target sizes',
+                  value: settings.largeButtons,
+                  onChanged: (v) => update(settings.copyWith(largeButtons: v)),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const SectionHeading(
+                title: 'Language',
+                subtitle: 'Choose the language used across the app',
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: Column(
+                  children: [
+                    RadioListTile<String>(
+                      value: 'en',
+                      groupValue: locale.languageCode,
+                      title: const Text('English'),
+                      onChanged: (value) => ref
+                          .read(localeProvider.notifier)
+                          .setLocale(Locale(value!)),
+                    ),
+                    RadioListTile<String>(
+                      value: 'fil',
+                      groupValue: locale.languageCode,
+                      title: const Text('Filipino'),
+                      onChanged: (value) => ref
+                          .read(localeProvider.notifier)
+                          .setLocale(Locale(value!)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 22),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  await FlutterTts().speak(
+                    'Welcome to IKeriKin. Your accessibility settings are ready.',
+                  );
+                },
+                icon: const Icon(Icons.hearing_rounded),
+                label: const Text('Test text to speech'),
+              ),
+              const SizedBox(height: 10),
+              FilledButton.tonalIcon(
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (dialogContext) => AlertDialog(
+                      icon: const Icon(Icons.logout_rounded),
+                      title: const Text('Sign out?'),
+                      content: const Text(
+                        'You will need to sign in again to reach your child profiles and lessons.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dialogContext, false),
+                          child: const Text('Stay signed in'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(dialogContext, true),
+                          child: const Text('Sign out'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed != true) return;
+                  await ref.read(authControllerProvider.notifier).signOut();
+                  if (context.mounted) context.go('/login');
+                },
+                icon: const Icon(Icons.logout_rounded),
+                label: const Text('Sign out'),
+              ),
+              const SizedBox(height: 24),
+              Center(
+                child: Text(
+                  'IKeriKin 1.0.0 • Made with care in the Philippines',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
         ),
       ),
     );
@@ -946,157 +956,180 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     final user = ref.watch(authStateProvider).value;
     if (user?.role != UserRole.administrator)
       return Scaffold(
-        appBar: AppBar(),
-        body: const EmptyState(
-          icon: Icons.admin_panel_settings_outlined,
-          title: 'Administrator access required',
-          message: 'This area is protected by role-based access policies.',
+        backgroundColor: Colors.transparent,
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+        body: const AuroraBackground(
+          child: EmptyState(
+            icon: Icons.admin_panel_settings_outlined,
+            title: 'Administrator access required',
+            message: 'This area is protected by role-based access policies.',
+          ),
         ),
       );
     final metrics = ref.watch(adminMetricsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('IKeriKin Administration')),
-      body: ResponsiveBody(
-        child: metrics.when(
-          loading: () => const LoadingView(message: 'Loading metrics…'),
-          error: (error, _) => ErrorView(
-            message: error.toString(),
-            onRetry: () => ref.invalidate(adminMetricsProvider),
-          ),
-          data: (data) => ListView(
-            children: [
-              ResponsiveGrid(
-                minItemWidth: 150,
-                itemHeight: 136,
-                children: [
-                  MetricCard(
-                    icon: Icons.people_rounded,
-                    value: '${data.users}',
-                    label: 'Users',
-                  ),
-                  MetricCard(
-                    icon: Icons.child_care_rounded,
-                    value: '${data.children}',
-                    label: 'Children',
-                  ),
-                  MetricCard(
-                    icon: Icons.menu_book_rounded,
-                    value: '${data.lessons}',
-                    label: 'Lessons',
-                  ),
-                  MetricCard(
-                    icon: Icons.task_alt_rounded,
-                    value: '${data.completedLessons}',
-                    label: 'Completed',
-                  ),
-                  MetricCard(
-                    icon: Icons.flag_rounded,
-                    value: '${data.openReports}',
-                    label: 'Open reports',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'profiles', label: Text('Users')),
-                  ButtonSegment(value: 'children', label: Text('Children')),
-                  ButtonSegment(value: 'lessons', label: Text('Lessons')),
-                  ButtonSegment(value: 'reports', label: Text('Reports')),
-                  ButtonSegment(value: 'categories', label: Text('Categories')),
-                ],
-                selected: {_section},
-                onSelectionChanged: (value) =>
-                    setState(() => _section = value.first),
-                showSelectedIcon: false,
-              ),
-              const SizedBox(height: 18),
-              FutureBuilder<List<Map<String, dynamic>>>(
-                future: ref.read(adminRepositoryProvider).getRecords(_section),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError)
-                    return ErrorView(message: snapshot.error.toString());
-                  if (!snapshot.hasData)
-                    return const LoadingView(message: 'Loading records…');
-                  if (snapshot.data!.isEmpty)
-                    return const EmptyState(
-                      icon: Icons.inbox_rounded,
-                      title: 'No records',
-                      message: 'No records are available in this section.',
-                    );
-                  return Card(
-                    child: Column(
-                      children: snapshot.data!
-                          .map(
-                            (record) => ListTile(
-                              title: Text(
-                                (record['display_name'] ??
-                                        record['name'] ??
-                                        record['title'] ??
-                                        record['id'])
-                                    .toString(),
-                              ),
-                              subtitle: Text(
-                                (record['email'] ??
-                                        record['status'] ??
-                                        record['created_at'] ??
-                                        '')
-                                    .toString(),
-                              ),
-                              trailing: _section == 'profiles'
-                                  ? null
-                                  : IconButton(
-                                      icon: const Icon(Icons.delete_outline),
-                                      tooltip: 'Delete record',
-                                      onPressed: () async {
-                                        final confirmed = await showDialog<bool>(
-                                          context: context,
-                                          builder: (dialogContext) => AlertDialog(
-                                            icon: const Icon(
-                                              Icons.delete_outline_rounded,
-                                            ),
-                                            title: const Text(
-                                              'Delete this record?',
-                                            ),
-                                            content: const Text(
-                                              'This action cannot be undone.',
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.pop(
-                                                  dialogContext,
-                                                  false,
-                                                ),
-                                                child: const Text('Cancel'),
-                                              ),
-                                              FilledButton(
-                                                onPressed: () => Navigator.pop(
-                                                  dialogContext,
-                                                  true,
-                                                ),
-                                                child: const Text('Delete'),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                        if (confirmed != true) return;
-                                        await ref
-                                            .read(adminRepositoryProvider)
-                                            .deleteRecord(
-                                              _section,
-                                              record['id'].toString(),
-                                            );
-                                        setState(() {});
-                                      },
-                                    ),
-                            ),
-                          )
-                          .toList(),
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+      body: AuroraBackground(
+        child: ResponsiveBody(
+          padding: const EdgeInsets.fromLTRB(20, 80, 20, 20),
+          child: metrics.when(
+            loading: () => const LoadingView(message: 'Loading metrics…'),
+            error: (error, _) => ErrorView(
+              message: error.toString(),
+              onRetry: () => ref.invalidate(adminMetricsProvider),
+            ),
+            data: (data) => ListView(
+              children: [
+                const HeroBanner(
+                  icon: Icons.admin_panel_settings_rounded,
+                  title: 'IKeriKin Administration',
+                  colorfulTitle: true,
+                  subtitle: 'Operational metrics and record management.',
+                ),
+                const SizedBox(height: 16),
+                ResponsiveGrid(
+                  minItemWidth: 150,
+                  itemHeight: 136,
+                  children: [
+                    MetricCard(
+                      icon: Icons.people_rounded,
+                      value: '${data.users}',
+                      label: 'Users',
                     ),
-                  );
-                },
-              ),
-            ],
+                    MetricCard(
+                      icon: Icons.child_care_rounded,
+                      value: '${data.children}',
+                      label: 'Children',
+                    ),
+                    MetricCard(
+                      icon: Icons.menu_book_rounded,
+                      value: '${data.lessons}',
+                      label: 'Lessons',
+                    ),
+                    MetricCard(
+                      icon: Icons.task_alt_rounded,
+                      value: '${data.completedLessons}',
+                      label: 'Completed',
+                    ),
+                    MetricCard(
+                      icon: Icons.flag_rounded,
+                      value: '${data.openReports}',
+                      label: 'Open reports',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'profiles', label: Text('Users')),
+                    ButtonSegment(value: 'children', label: Text('Children')),
+                    ButtonSegment(value: 'lessons', label: Text('Lessons')),
+                    ButtonSegment(value: 'reports', label: Text('Reports')),
+                    ButtonSegment(
+                      value: 'categories',
+                      label: Text('Categories'),
+                    ),
+                  ],
+                  selected: {_section},
+                  onSelectionChanged: (value) =>
+                      setState(() => _section = value.first),
+                  showSelectedIcon: false,
+                ),
+                const SizedBox(height: 18),
+                FutureBuilder<List<Map<String, dynamic>>>(
+                  future: ref
+                      .read(adminRepositoryProvider)
+                      .getRecords(_section),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError)
+                      return ErrorView(message: snapshot.error.toString());
+                    if (!snapshot.hasData)
+                      return const LoadingView(message: 'Loading records…');
+                    if (snapshot.data!.isEmpty)
+                      return const EmptyState(
+                        icon: Icons.inbox_rounded,
+                        title: 'No records',
+                        message: 'No records are available in this section.',
+                      );
+                    return Card(
+                      child: Column(
+                        children: snapshot.data!
+                            .map(
+                              (record) => ListTile(
+                                title: Text(
+                                  (record['display_name'] ??
+                                          record['name'] ??
+                                          record['title'] ??
+                                          record['id'])
+                                      .toString(),
+                                ),
+                                subtitle: Text(
+                                  (record['email'] ??
+                                          record['status'] ??
+                                          record['created_at'] ??
+                                          '')
+                                      .toString(),
+                                ),
+                                trailing: _section == 'profiles'
+                                    ? null
+                                    : IconButton(
+                                        icon: const Icon(Icons.delete_outline),
+                                        tooltip: 'Delete record',
+                                        onPressed: () async {
+                                          final confirmed = await showDialog<bool>(
+                                            context: context,
+                                            builder: (dialogContext) => AlertDialog(
+                                              icon: const Icon(
+                                                Icons.delete_outline_rounded,
+                                              ),
+                                              title: const Text(
+                                                'Delete this record?',
+                                              ),
+                                              content: const Text(
+                                                'This action cannot be undone.',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(
+                                                        dialogContext,
+                                                        false,
+                                                      ),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                FilledButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(
+                                                        dialogContext,
+                                                        true,
+                                                      ),
+                                                  child: const Text('Delete'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                          if (confirmed != true) return;
+                                          await ref
+                                              .read(adminRepositoryProvider)
+                                              .deleteRecord(
+                                                _section,
+                                                record['id'].toString(),
+                                              );
+                                          setState(() {});
+                                        },
+                                      ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),

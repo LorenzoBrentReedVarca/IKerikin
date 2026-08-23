@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -20,13 +19,11 @@ abstract interface class AuthRepository {
   Future<void> signOut();
 }
 
-/// Supabase authentication implementation with local preview support.
+/// Supabase authentication implementation.
 class SupabaseAuthRepository implements AuthRepository {
-  SupabaseAuthRepository(this._client, this._preferences);
+  SupabaseAuthRepository(this._client);
 
-  final SupabaseClient? _client;
-  final SharedPreferences _preferences;
-  static const _localUserKey = 'local_user';
+  final SupabaseClient _client;
 
   AppUser? _mapUser(User? user) {
     if (user == null) return null;
@@ -47,13 +44,6 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Stream<AppUser?> watchUser() async* {
-    if (_client == null) {
-      final data = _preferences.getString(_localUserKey);
-      yield data == null
-          ? null
-          : AppUser.fromJson(jsonDecode(data) as Map<String, dynamic>);
-      return;
-    }
     yield _mapUser(_client.auth.currentUser);
     yield* _client.auth.onAuthStateChange.map(
       (event) => _mapUser(event.session?.user),
@@ -62,23 +52,6 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Future<AppUser> signIn(String email, String password) async {
-    if (_client == null) {
-      if (email.trim().isEmpty || password.length < 6) {
-        throw const AuthException(
-          'Enter a valid email and a password of at least 6 characters.',
-        );
-      }
-      final user = AppUser(
-        id: const Uuid().v5(
-          '6ba7b811-9dad-11d1-80b4-00c04fd430c8',
-          email.trim().toLowerCase(),
-        ),
-        email: email.trim(),
-        displayName: email.split('@').first,
-      );
-      await _preferences.setString(_localUserKey, jsonEncode(user.toJson()));
-      return user;
-    }
     final response = await _client.auth.signInWithPassword(
       email: email.trim(),
       password: password,
@@ -95,18 +68,6 @@ class SupabaseAuthRepository implements AuthRepository {
         'Use a valid name, email, and password of at least 8 characters.',
       );
     }
-    if (_client == null) {
-      final user = AppUser(
-        id: const Uuid().v5(
-          '6ba7b811-9dad-11d1-80b4-00c04fd430c8',
-          email.trim().toLowerCase(),
-        ),
-        email: email.trim(),
-        displayName: name.trim(),
-      );
-      await _preferences.setString(_localUserKey, jsonEncode(user.toJson()));
-      return user;
-    }
     final response = await _client.auth.signUp(
       email: email.trim(),
       password: password,
@@ -121,11 +82,6 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> signInWithGoogle() async {
-    if (_client == null) {
-      throw const AuthException(
-        'Google sign-in requires Supabase configuration.',
-      );
-    }
     final opened = await _client.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: AppConfig.redirectUrl,
@@ -138,29 +94,24 @@ class SupabaseAuthRepository implements AuthRepository {
   Future<void> sendPasswordReset(String email) async {
     if (!email.contains('@'))
       throw const AuthException('Enter a valid email address.');
-    if (_client != null) {
-      await _client.auth.resetPasswordForEmail(
-        email.trim(),
-        redirectTo: AppConfig.redirectUrl,
-      );
-    }
+    await _client.auth.resetPasswordForEmail(
+      email.trim(),
+      redirectTo: AppConfig.redirectUrl,
+    );
   }
 
   @override
   Future<void> resendVerification(String email) async {
-    if (_client != null) {
-      await _client.auth.resend(
-        type: OtpType.signup,
-        email: email.trim(),
-        emailRedirectTo: AppConfig.redirectUrl,
-      );
-    }
+    await _client.auth.resend(
+      type: OtpType.signup,
+      email: email.trim(),
+      emailRedirectTo: AppConfig.redirectUrl,
+    );
   }
 
   @override
   Future<void> signOut() async {
-    await _preferences.remove(_localUserKey);
-    await _client?.auth.signOut();
+    await _client.auth.signOut();
   }
 }
 
@@ -173,91 +124,48 @@ abstract interface class ChildRepository {
   Future<String> uploadPhoto(String childId, Uint8List bytes, String extension);
 }
 
-/// Supabase child repository with JSON offline cache.
+/// Supabase child repository.
 class SupabaseChildRepository implements ChildRepository {
-  SupabaseChildRepository(this._client, this._preferences);
-  final SupabaseClient? _client;
-  final SharedPreferences _preferences;
-  static const _cacheKey = 'children_cache';
-
-  Future<List<ChildProfile>> _readCache() async {
-    final data = _preferences.getString(_cacheKey);
-    if (data == null) return [];
-    return (jsonDecode(data) as List)
-        .map(
-          (item) =>
-              ChildProfile.fromJson(Map<String, dynamic>.from(item as Map)),
-        )
-        .toList();
-  }
-
-  Future<void> _writeCache(List<ChildProfile> children) =>
-      _preferences.setString(
-        _cacheKey,
-        jsonEncode(children.map((child) => child.toJson()).toList()),
-      );
+  SupabaseChildRepository(this._client);
+  final SupabaseClient _client;
 
   @override
   Future<List<ChildProfile>> getChildren(String parentId) async {
-    if (_client == null) return _readCache();
-    try {
-      final rows = await _client
-          .from('children')
-          .select()
-          .eq('parent_id', parentId)
-          .order('created_at');
-      final children = rows.map(ChildProfile.fromJson).toList();
-      await _writeCache(children);
-      return children;
-    } catch (_) {
-      return _readCache();
-    }
+    final rows = await _client
+        .from('children')
+        .select()
+        .eq('parent_id', parentId)
+        .order('created_at');
+    return rows.map(ChildProfile.fromJson).toList();
   }
 
+  /// Emits an immediate REST-fetched snapshot before layering on the
+  /// realtime subscription, so a slow or misconfigured realtime channel
+  /// never blocks the initial load of a parent's children.
   @override
   Stream<List<ChildProfile>> watchChildren(String parentId) async* {
     yield await getChildren(parentId);
-    if (_client != null) {
-      yield* _client
-          .from('children')
-          .stream(primaryKey: ['id'])
-          .eq('parent_id', parentId)
-          .order('created_at')
-          .map((rows) => rows.map(ChildProfile.fromJson).toList())
-          .asyncMap((children) async {
-            await _writeCache(children);
-            return children;
-          });
-    }
+    yield* _client
+        .from('children')
+        .stream(primaryKey: ['id'])
+        .eq('parent_id', parentId)
+        .order('created_at')
+        .map((rows) => rows.map(ChildProfile.fromJson).toList());
   }
 
   @override
   Future<ChildProfile> save(ChildProfile child) async {
-    if (_client != null) {
-      final row = await _client
-          .from('children')
-          .upsert(child.toJson())
-          .select()
-          .single();
-      return ChildProfile.fromJson(row);
-    }
-    final children = await _readCache();
-    final index = children.indexWhere((item) => item.id == child.id);
-    if (index < 0) {
-      children.add(child);
-    } else {
-      children[index] = child;
-    }
-    await _writeCache(children);
-    return child;
+    final row = await _client
+        .from('children')
+        .upsert(child.toJson())
+        .select()
+        .single();
+    return ChildProfile.fromJson(row);
   }
 
   @override
   Future<void> delete(String id) async {
-    if (_client != null) await _client.from('children').delete().eq('id', id);
-    final children = await _readCache()
-      ..removeWhere((item) => item.id == id);
-    await _writeCache(children);
+    await _client.from('children').delete().eq('id', id);
   }
 
   @override
@@ -266,7 +174,6 @@ class SupabaseChildRepository implements ChildRepository {
     Uint8List bytes,
     String extension,
   ) async {
-    if (_client == null) return '';
     final path = '${_client.auth.currentUser!.id}/$childId.$extension';
     await _client.storage
         .from('child-photos')
@@ -310,50 +217,6 @@ class SupabaseAiLessonProvider implements AiLessonProvider {
   }
 }
 
-/// AI 3D model generation contract consumed by lesson playback screens.
-abstract interface class AiVideoProvider {
-  Future<VideoGeneration> create(Lesson lesson, ChildProfile child);
-  Future<VideoGeneration> getStatus(String videoId);
-}
-
-/// Supabase Edge Function adapter that keeps the Meshy API key off-device.
-class SupabaseAiVideoProvider implements AiVideoProvider {
-  const SupabaseAiVideoProvider(this._client);
-
-  final SupabaseClient _client;
-
-  Future<VideoGeneration> _invoke(Map<String, dynamic> body) async {
-    final response = await _client.functions.invoke(
-      AppConfig.videoFunctionName,
-      body: body,
-    );
-    if (response.status < 200 || response.status >= 300) {
-      throw Exception('Video service returned status ${response.status}.');
-    }
-    final data = Map<String, dynamic>.from(response.data as Map);
-    if (data['error'] is String) throw Exception(data['error']);
-    return VideoGeneration.fromJson(data);
-  }
-
-  @override
-  Future<VideoGeneration> create(Lesson lesson, ChildProfile child) => _invoke({
-    'action': 'create',
-    'lesson_id': lesson.id,
-    'title': lesson.content.title,
-    'summary': lesson.content.summary,
-    'story': lesson.content.story,
-    'child_preferences': {
-      'interests': child.interests,
-      'learning_styles': child.learningStyles,
-      'preferred_language': child.preferredLanguage,
-    },
-  });
-
-  @override
-  Future<VideoGeneration> getStatus(String videoId) =>
-      _invoke({'action': 'status', 'video_id': videoId});
-}
-
 /// Swappable animated lesson-video generation contract.
 ///
 /// The Flutter app never talks to a video provider (e.g. Runway) directly —
@@ -384,10 +247,7 @@ class SupabaseVideoGenerationService implements VideoGenerationService {
   static const _functionName = 'generate-video-scenes';
 
   Future<VideoGenerationJob> _invoke(Map<String, dynamic> body) async {
-    final response = await _client.functions.invoke(
-      _functionName,
-      body: body,
-    );
+    final response = await _client.functions.invoke(_functionName, body: body);
     if (response.status < 200 || response.status >= 300) {
       throw Exception(
         'Video generation service returned status ${response.status}.',
@@ -441,11 +301,10 @@ abstract interface class VideoJobRepository {
 /// Supabase-backed job repository built on [VideoGenerationService].
 class SupabaseVideoJobRepository implements VideoJobRepository {
   SupabaseVideoJobRepository(this._client, this._service);
-  final SupabaseClient? _client;
+  final SupabaseClient _client;
   final VideoGenerationService _service;
 
   Future<List<GeneratedVideoScene>> _scenesForJob(String jobId) async {
-    if (_client == null) return const [];
     final rows = await _client
         .from('generated_video_scenes')
         .select()
@@ -456,7 +315,6 @@ class SupabaseVideoJobRepository implements VideoJobRepository {
 
   @override
   Future<VideoGenerationJob?> getJobForLesson(String lessonId) async {
-    if (_client == null) return null;
     final rows = await _client
         .from('video_generation_jobs')
         .select()
@@ -465,26 +323,30 @@ class SupabaseVideoJobRepository implements VideoJobRepository {
         .limit(1);
     if (rows.isEmpty) return null;
     final job = Map<String, dynamic>.from(rows.first as Map);
-    return VideoGenerationJob.fromJson(job, scenes: await _scenesForJob(job['id'] as String));
+    return VideoGenerationJob.fromJson(
+      job,
+      scenes: await _scenesForJob(job['id'] as String),
+    );
   }
 
+  /// Polls the Runway-backed edge function every few seconds until the job
+  /// reaches a terminal state. Supabase Realtime only reports database
+  /// writes, and nothing writes progress to `video_generation_jobs` except
+  /// this very poll (the edge function's `status` action), so without it a
+  /// job would sit at "generating" forever even after Runway finishes.
   @override
   Stream<VideoGenerationJob?> watchJobForLesson(String lessonId) async* {
-    yield await getJobForLesson(lessonId);
-    if (_client == null) return;
-    yield* _client
-        .from('video_generation_jobs')
-        .stream(primaryKey: ['id'])
-        .eq('lesson_id', lessonId)
-        .order('created_at')
-        .asyncMap((rows) async {
-          if (rows.isEmpty) return null;
-          final job = Map<String, dynamic>.from(rows.last);
-          return VideoGenerationJob.fromJson(
-            job,
-            scenes: await _scenesForJob(job['id'] as String),
-          );
-        });
+    var current = await getJobForLesson(lessonId);
+    yield current;
+    while (current != null && !current.isComplete && !current.isFailed) {
+      await Future<void>.delayed(const Duration(seconds: 4));
+      try {
+        current = await _service.getJob(current.id);
+      } catch (_) {
+        current = await getJobForLesson(lessonId) ?? current;
+      }
+      yield current;
+    }
   }
 
   @override
@@ -496,73 +358,6 @@ class SupabaseVideoJobRepository implements VideoJobRepository {
   @override
   Future<VideoGenerationJob> retry(String jobId, List<VideoScene> scenes) =>
       _service.retryJob(jobId, scenes);
-}
-
-
-class LocalEducationalProvider implements AiLessonProvider {
-  const LocalEducationalProvider();
-
-  @override
-  Future<LessonContent> generate(
-    LessonRequest request,
-    ChildProfile child,
-  ) async {
-    final interest = child.interests.isEmpty
-        ? 'favorite things'
-        : child.interests.first.toLowerCase();
-    final goal = request.goal.trim();
-    final name = child.name;
-    return LessonContent(
-      title: '$name Learns About $goal',
-      summary:
-          'A ${request.durationMinutes}-minute ${request.difficulty.name} lesson that uses $interest to help $name practice $goal.',
-      story:
-          '$name discovered a bright learning trail filled with $interest. At each stop, $name practiced $goal by looking carefully, listening, and trying one small step at a time. When a step felt difficult, $name took a calm breath and asked for help. By the end of the trail, $name had practiced three times and proudly said, “I can learn at my own pace!”',
-      flashcards: [
-        Flashcard(front: 'What are we learning?', back: goal),
-        const Flashcard(
-          front: 'What can I do when learning feels hard?',
-          back: 'Pause, breathe, and ask for help.',
-        ),
-        Flashcard(
-          front: 'What helps $name learn?',
-          back: 'Practice one small step at a time.',
-        ),
-      ],
-      quiz: [
-        QuizQuestion(
-          question: 'What is today’s learning goal?',
-          options: [goal, 'Skip practice', 'Rush quickly'],
-          correctIndex: 0,
-          explanation: 'Today we are practicing $goal.',
-        ),
-        const QuizQuestion(
-          question: 'What should you do when a task feels difficult?',
-          options: ['Give up', 'Breathe and ask for help', 'Hide'],
-          correctIndex: 1,
-          explanation:
-              'A calm breath and help from a trusted adult make learning easier.',
-        ),
-      ],
-      memoryGame: [
-        ActivityPair(left: goal, right: 'Today’s goal'),
-        const ActivityPair(left: 'Calm breath', right: 'Helps me focus'),
-        const ActivityPair(left: 'Practice', right: 'Helps me improve'),
-      ],
-      matchingActivity: [
-        const ActivityPair(left: 'Eyes', right: 'Look'),
-        const ActivityPair(left: 'Ears', right: 'Listen'),
-        ActivityPair(left: 'Small steps', right: 'Learn $goal'),
-      ],
-      dailyActivity:
-          'Invite $name to practice $goal with three familiar objects related to $interest. Praise effort after every attempt and stop before frustration builds.',
-      parentTips: [
-        'Use short, concrete instructions and allow extra processing time.',
-        'Praise effort specifically: “You kept trying even when it was hard.”',
-        'Repeat this activity in a familiar routine and follow $name’s sensory needs.',
-      ],
-    );
-  }
 }
 
 /// Lesson persistence and generation contract.
@@ -577,52 +372,25 @@ abstract interface class LessonRepository {
   );
 }
 
-/// Supabase lesson repository with resilient local caching.
+/// Supabase lesson repository.
 class SupabaseLessonRepository implements LessonRepository {
-  SupabaseLessonRepository(this._client, this._preferences, this._ai);
-  final SupabaseClient? _client;
-  final SharedPreferences _preferences;
+  SupabaseLessonRepository(this._client, this._ai);
+  final SupabaseClient _client;
   final AiLessonProvider _ai;
-  static const _cacheKey = 'lessons_cache';
-
-  List<Lesson> _readCache() {
-    final data = _preferences.getString(_cacheKey);
-    if (data == null) return [];
-    return (jsonDecode(data) as List)
-        .map((item) => Lesson.fromJson(Map<String, dynamic>.from(item as Map)))
-        .toList();
-  }
-
-  Future<void> _writeCache(List<Lesson> lessons) => _preferences.setString(
-    _cacheKey,
-    jsonEncode(lessons.map((lesson) => lesson.toJson()).toList()),
-  );
 
   @override
   Future<List<Lesson>> getLessons(String childId) async {
-    if (_client != null) {
-      try {
-        final rows = await _client
-            .from('lessons')
-            .select()
-            .eq('child_id', childId)
-            .order('created_at', ascending: false);
-        final lessons = rows.map(Lesson.fromJson).toList();
-        final all = _readCache()
-          ..removeWhere((item) => item.childId == childId);
-        await _writeCache([...all, ...lessons]);
-        return lessons;
-      } catch (_) {}
-    }
-    return _readCache().where((lesson) => lesson.childId == childId).toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final rows = await _client
+        .from('lessons')
+        .select()
+        .eq('child_id', childId)
+        .order('created_at', ascending: false);
+    return rows.map(Lesson.fromJson).toList();
   }
 
   @override
   Future<Lesson> generate(LessonRequest request, ChildProfile child) async {
-    if (_client != null) {
-      await _client.from('lesson_requests').insert(request.toJson());
-    }
+    await _client.from('lesson_requests').insert(request.toJson());
     final content = await _ai.generate(request, child);
     final lesson = Lesson(
       id: const Uuid().v4(),
@@ -632,9 +400,7 @@ class SupabaseLessonRepository implements LessonRepository {
       status: LessonStatus.completed,
       createdAt: DateTime.now(),
     );
-    if (_client != null) await _client.from('lessons').insert(lesson.toJson());
-    final cache = _readCache()..insert(0, lesson);
-    await _writeCache(cache);
+    await _client.from('lessons').insert(lesson.toJson());
     return lesson;
   }
 
@@ -645,21 +411,13 @@ class SupabaseLessonRepository implements LessonRepository {
     int score,
     int minutes,
   ) async {
-    final event = {
+    await _client.from('lesson_progress').insert({
       'lesson_id': lessonId,
       'child_id': childId,
       'quiz_score': score,
       'time_spent_minutes': minutes,
       'completed_at': DateTime.now().toIso8601String(),
-    };
-    if (_client != null) {
-      await _client.from('lesson_progress').insert(event);
-    } else {
-      final events =
-          jsonDecode(_preferences.getString('progress_events') ?? '[]') as List;
-      events.add(event);
-      await _preferences.setString('progress_events', jsonEncode(events));
-    }
+    });
   }
 }
 
@@ -668,28 +426,17 @@ abstract interface class ProgressRepository {
   Future<ProgressSummary> getSummary(String childId);
 }
 
-/// Aggregates progress from Supabase or local completion events.
+/// Aggregates progress from Supabase lesson completion events.
 class SupabaseProgressRepository implements ProgressRepository {
-  SupabaseProgressRepository(this._client, this._preferences);
-  final SupabaseClient? _client;
-  final SharedPreferences _preferences;
+  SupabaseProgressRepository(this._client);
+  final SupabaseClient _client;
 
   @override
   Future<ProgressSummary> getSummary(String childId) async {
-    List<Map<String, dynamic>> events;
-    if (_client != null) {
-      events = await _client
-          .from('lesson_progress')
-          .select()
-          .eq('child_id', childId);
-    } else {
-      events =
-          (jsonDecode(_preferences.getString('progress_events') ?? '[]')
-                  as List)
-              .map((item) => Map<String, dynamic>.from(item as Map))
-              .where((item) => item['child_id'] == childId)
-              .toList();
-    }
+    final events = await _client
+        .from('lesson_progress')
+        .select()
+        .eq('child_id', childId);
     final scores = events
         .map((item) => item['quiz_score'] as int? ?? 0)
         .toList();
@@ -763,19 +510,10 @@ abstract interface class AdminRepository {
 /// Restricted Supabase administration implementation.
 class SupabaseAdminRepository implements AdminRepository {
   const SupabaseAdminRepository(this._client);
-  final SupabaseClient? _client;
+  final SupabaseClient _client;
 
   @override
   Future<AdminMetrics> getMetrics() async {
-    if (_client == null) {
-      return const AdminMetrics(
-        users: 1,
-        children: 0,
-        lessons: 0,
-        completedLessons: 0,
-        openReports: 0,
-      );
-    }
     final result = await _client.rpc('admin_dashboard_metrics');
     final data = Map<String, dynamic>.from(result as Map);
     return AdminMetrics(
@@ -789,7 +527,6 @@ class SupabaseAdminRepository implements AdminRepository {
 
   @override
   Future<List<Map<String, dynamic>>> getRecords(String table) async {
-    if (_client == null) return [];
     final allowed = {
       'profiles',
       'children',
@@ -805,7 +542,7 @@ class SupabaseAdminRepository implements AdminRepository {
   Future<void> deleteRecord(String table, String id) async {
     final allowed = {'children', 'reports', 'lessons', 'categories'};
     if (!allowed.contains(table)) throw ArgumentError.value(table, 'table');
-    await _client?.from(table).delete().eq('id', id);
+    await _client.from(table).delete().eq('id', id);
   }
 }
 

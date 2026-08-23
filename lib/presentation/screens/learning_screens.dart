@@ -1,10 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_3d_controller/flutter_3d_controller.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:uuid/uuid.dart';
 import 'package:video_player/video_player.dart';
@@ -53,9 +54,9 @@ Future<void> pickChildSheet(
           children: [
             Text(
               'Switch learner',
-              style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w900,
-              ),
+              style: Theme.of(
+                sheetContext,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 8),
             for (final item in children)
@@ -64,6 +65,7 @@ Future<void> pickChildSheet(
                 leading: ChildAvatar(
                   name: item.name,
                   photoUrl: item.photoUrl,
+                  gender: item.gender,
                   radius: 20,
                 ),
                 title: Text(
@@ -106,155 +108,155 @@ class HomeScreen extends ConsumerWidget {
       body: SceneBackground(
         scene: SceneKind.home,
         child: ResponsiveBody(
-          maxWidth: 1180,
+          maxWidth: 1600,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: childrenState.when(
-          loading: () => const LoadingView(message: 'Loading your family…'),
-          error: (error, _) => ErrorView(
-            message: error.toString(),
-            onRetry: () => ref.invalidate(childrenProvider(user.id)),
-          ),
-          data: (children) {
-            if (children.isEmpty) {
-              return EmptyState(
-                icon: Icons.auto_awesome_rounded,
-                title: 'Let’s begin together',
-                message:
-                    'Create a child profile to unlock personalized lessons, goals, and progress tracking.',
-                action: FilledButton.icon(
-                  onPressed: () => context.go('/children'),
-                  icon: const Icon(Icons.person_add),
-                  label: const Text('Create profile'),
-                ),
-              );
-            }
-            final selectedId = ref.watch(selectedChildProvider);
-            final child =
-                children.where((item) => item.id == selectedId).firstOrNull ??
-                children.first;
-            final progress =
-                ref.watch(progressProvider(child.id)).value ??
-                const ProgressSummary(
-                  completedLessons: 0,
-                  completedToday: 0,
-                  averageQuizScore: 0,
-                  timeSpentMinutes: 0,
-                  xp: 0,
-                  coins: 0,
-                  streakDays: 0,
-                  badges: [],
-                  weeklyMinutes: [0, 0, 0, 0, 0, 0, 0],
-                  monthlyCompletions: [0, 0, 0, 0],
+            loading: () => const LoadingView(message: 'Loading your family…'),
+            error: (error, _) => ErrorView(
+              message: error.toString(),
+              onRetry: () => ref.invalidate(childrenProvider(user.id)),
+            ),
+            data: (children) {
+              if (children.isEmpty) {
+                return EmptyState(
+                  icon: Icons.auto_awesome_rounded,
+                  title: 'Let’s begin together',
+                  message:
+                      'Create a child profile to unlock personalized lessons, goals, and progress tracking.',
+                  action: FilledButton.icon(
+                    onPressed: () => context.go('/children'),
+                    icon: const Icon(Icons.person_add),
+                    label: const Text('Create profile'),
+                  ),
                 );
-            final lessons = ref.watch(lessonsProvider(child.id)).value ?? [];
-            final completedToday = progress.completedToday.clamp(
-              0,
-              _dailyTarget,
-            );
-            return RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(lessonsProvider(child.id));
-                ref.invalidate(progressProvider(child.id));
-              },
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: [
-                  const AnimatedAppear(child: _Masthead()),
-                  const SizedBox(height: 16),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final left = [
-                        AnimatedAppear(
-                          delay: staggerDelay(1),
-                          child: _LearnerPanel(
-                            userName: user.displayName,
-                            child: child,
-                            children: children,
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        AnimatedAppear(
-                          delay: staggerDelay(2),
-                          child: _LearningPathCard(
-                            childName: child.name,
-                            completed: completedToday,
-                            target: _dailyTarget,
-                          ),
-                        ),
-                      ];
-                      final right = [
-                        AnimatedAppear(
-                          delay: staggerDelay(3),
-                          child: _NextStationCard(
-                            childName: child.name,
-                            nextLesson: lessons.firstOrNull,
-                            onCreate: () => context.go('/create'),
-                            onContinue: (lesson) => context.push(
-                              '/lesson/${lesson.id}',
-                              extra: lesson,
+              }
+              final selectedId = ref.watch(selectedChildProvider);
+              final child =
+                  children.where((item) => item.id == selectedId).firstOrNull ??
+                  children.first;
+              final progress =
+                  ref.watch(progressProvider(child.id)).value ??
+                  const ProgressSummary(
+                    completedLessons: 0,
+                    completedToday: 0,
+                    averageQuizScore: 0,
+                    timeSpentMinutes: 0,
+                    xp: 0,
+                    coins: 0,
+                    streakDays: 0,
+                    badges: [],
+                    weeklyMinutes: [0, 0, 0, 0, 0, 0, 0],
+                    monthlyCompletions: [0, 0, 0, 0],
+                  );
+              final lessons = ref.watch(lessonsProvider(child.id)).value ?? [];
+              final completedToday = progress.completedToday.clamp(
+                0,
+                _dailyTarget,
+              );
+              return RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(lessonsProvider(child.id));
+                  ref.invalidate(progressProvider(child.id));
+                },
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    const AnimatedAppear(child: _Masthead()),
+                    const SizedBox(height: 16),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final left = [
+                          AnimatedAppear(
+                            delay: staggerDelay(1),
+                            child: _LearnerPanel(
+                              userName: user.displayName,
+                              child: child,
+                              children: children,
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 22),
-                        AnimatedAppear(
-                          delay: staggerDelay(4),
-                          child: _LessonShelfSection(
-                            childName: child.name,
-                            lessons: lessons,
-                            onSeeAll: () => context.go('/learn'),
-                            onOpen: (lesson) => context.push(
-                              '/lesson/${lesson.id}',
-                              extra: lesson,
+                          const SizedBox(height: 18),
+                          AnimatedAppear(
+                            delay: staggerDelay(2),
+                            child: _LearningPathCard(
+                              childName: child.name,
+                              completed: completedToday,
+                              target: _dailyTarget,
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 22),
-                        AnimatedAppear(
-                          delay: staggerDelay(5),
-                          child: _ProgressSummaryLine(
-                            progress: progress,
-                            onViewProgress: () => context.go('/progress'),
+                        ];
+                        final right = [
+                          AnimatedAppear(
+                            delay: staggerDelay(3),
+                            child: _NextStationCard(
+                              childName: child.name,
+                              nextLesson: lessons.firstOrNull,
+                              onCreate: () => context.go('/create'),
+                              onContinue: (lesson) => context.push(
+                                '/lesson/${lesson.id}',
+                                extra: lesson,
+                              ),
+                            ),
                           ),
-                        ),
-                      ];
-                      if (constraints.maxWidth < 760) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          const SizedBox(height: 22),
+                          AnimatedAppear(
+                            delay: staggerDelay(4),
+                            child: _LessonShelfSection(
+                              childName: child.name,
+                              lessons: lessons,
+                              onSeeAll: () => context.go('/learn'),
+                              onOpen: (lesson) => context.push(
+                                '/lesson/${lesson.id}',
+                                extra: lesson,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 22),
+                          AnimatedAppear(
+                            delay: staggerDelay(5),
+                            child: _ProgressSummaryLine(
+                              progress: progress,
+                              onViewProgress: () => context.go('/progress'),
+                            ),
+                          ),
+                        ];
+                        if (constraints.maxWidth < 760) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              ...left,
+                              const SizedBox(height: 22),
+                              ...right,
+                            ],
+                          );
+                        }
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            ...left,
-                            const SizedBox(height: 22),
-                            ...right,
+                            Expanded(
+                              flex: 35,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: left,
+                              ),
+                            ),
+                            const SizedBox(width: 32),
+                            Expanded(
+                              flex: 65,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: right,
+                              ),
+                            ),
                           ],
                         );
-                      }
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 35,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: left,
-                            ),
-                          ),
-                          const SizedBox(width: 32),
-                          Expanded(
-                            flex: 65,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: right,
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            );
-          },
-        ),
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -367,9 +369,9 @@ class _LearnerPanel extends ConsumerWidget {
             children: [
               Text(
                 'Switch learner',
-                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+                style: Theme.of(
+                  sheetContext,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
               for (final item in children)
@@ -378,6 +380,7 @@ class _LearnerPanel extends ConsumerWidget {
                   leading: ChildAvatar(
                     name: item.name,
                     photoUrl: item.photoUrl,
+                    gender: item.gender,
                     radius: 20,
                   ),
                   title: Text(
@@ -431,6 +434,7 @@ class _LearnerPanel extends ConsumerWidget {
               ChildAvatar(
                 name: child.name,
                 photoUrl: child.photoUrl,
+                gender: child.gender,
                 radius: 30,
               ),
               const SizedBox(width: 14),
@@ -633,14 +637,14 @@ class _PathStop extends StatelessWidget {
         TweenAnimationBuilder<double>(
           key: ValueKey(done),
           tween: Tween(begin: done ? 0.7 : 1, end: 1),
-          duration: reduced
-              ? Duration.zero
-              : const Duration(milliseconds: 360),
+          duration: reduced ? Duration.zero : const Duration(milliseconds: 360),
           curve: Curves.elasticOut,
           builder: (context, scale, child) =>
               Transform.scale(scale: scale, child: child),
           child: AnimatedContainer(
-            duration: reduced ? Duration.zero : const Duration(milliseconds: 260),
+            duration: reduced
+                ? Duration.zero
+                : const Duration(milliseconds: 260),
             curve: Curves.easeOut,
             width: 36,
             height: 36,
@@ -660,9 +664,7 @@ class _PathStop extends StatelessWidget {
             child: Text(
               '$index',
               style: TextStyle(
-                color: done
-                    ? Colors.white
-                    : theme.colorScheme.onSurfaceVariant,
+                color: done ? Colors.white : theme.colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -775,22 +777,16 @@ class _NextStationCard extends StatelessWidget {
             child: BouncyTap(
               scale: .97,
               child: FilledButton.icon(
-                onPressed: lesson == null
-                    ? onCreate
-                    : () => onContinue(lesson),
+                onPressed: lesson == null ? onCreate : () => onContinue(lesson),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.brandViolet,
                   minimumSize: const Size.fromHeight(52),
                 ),
                 icon: Icon(
-                  lesson == null
-                      ? Icons.add_rounded
-                      : Icons.play_arrow_rounded,
+                  lesson == null ? Icons.add_rounded : Icons.play_arrow_rounded,
                 ),
                 label: Text(
-                  lesson == null
-                      ? 'Choose a learning goal'
-                      : 'Continue lesson',
+                  lesson == null ? 'Choose a learning goal' : 'Continue lesson',
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
@@ -941,7 +937,9 @@ class _ProgressSummaryLine extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.only(top: 16),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
+        border: Border(
+          top: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
       ),
       child: Row(
         children: [
@@ -1124,99 +1122,99 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
       body: SceneBackground(
         scene: SceneKind.learn,
         child: ResponsiveBody(
-          maxWidth: 1180,
+          maxWidth: 1600,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: RefreshIndicator(
             onRefresh: () async {
               if (child != null) ref.invalidate(lessonsProvider(child.id));
             },
             child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            children: [
-              HeroBanner(
-                icon: Icons.menu_book_rounded,
-                title: 'Learn',
-                colorfulTitle: true,
-                subtitle: child == null
-                    ? 'Choose a learning profile to browse lessons.'
-                    : 'Find a lesson by skill, title, or learning goal.',
-                actions: [
-                  MastheadAction(
-                    icon: Icons.menu_book_outlined,
-                    tooltip: 'Word Explorer',
-                    onPressed: () => context.push('/dictionary'),
-                  ),
-                  MastheadAction(
-                    icon: Icons.settings_outlined,
-                    tooltip: 'Settings and accessibility',
-                    onPressed: () => context.push('/settings'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              if (child == null)
-                EmptyState(
-                  icon: Icons.child_care_rounded,
-                  title: 'Choose a learning profile',
-                  message:
-                      'Create or select a child profile before browsing lessons.',
-                  action: FilledButton.icon(
-                    onPressed: () => context.push('/children'),
-                    icon: const Icon(Icons.person_add_alt_1_rounded),
-                    label: const Text('Manage profiles'),
-                  ),
-                )
-              else
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final learnerColumn = _LearnerColumn(
-                      userName: user?.displayName ?? '',
-                      child: child,
-                      children: children,
-                    );
-                    final libraryColumn = _LibraryColumn(
-                      child: child,
-                      searchController: _searchController,
-                      onSearchChanged: () => setState(() {}),
-                      categories: _categories,
-                      lessons: lessons,
-                      categoryOf: _categoryFor,
-                      selectedCategory: _category,
-                      onCategorySelected: (value) =>
-                          setState(() => _category = value),
-                      filteredLessons: filteredLessons,
-                      loading: lessonsState?.isLoading ?? false,
-                      error: lessonsState?.hasError ?? false
-                          ? lessonsState!.error.toString()
-                          : null,
-                      onRetry: () =>
-                          ref.invalidate(lessonsProvider(child.id)),
-                      onClearFilters: () {
-                        _searchController.clear();
-                        setState(() => _category = 'All');
-                      },
-                    );
-                    if (constraints.maxWidth < 760) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                HeroBanner(
+                  icon: Icons.menu_book_rounded,
+                  title: 'Learn',
+                  colorfulTitle: true,
+                  subtitle: child == null
+                      ? 'Choose a learning profile to browse lessons.'
+                      : 'Find a lesson by skill, title, or learning goal.',
+                  actions: [
+                    MastheadAction(
+                      icon: Icons.menu_book_outlined,
+                      tooltip: 'Word Explorer',
+                      onPressed: () => context.push('/dictionary'),
+                    ),
+                    MastheadAction(
+                      icon: Icons.settings_outlined,
+                      tooltip: 'Settings and accessibility',
+                      onPressed: () => context.push('/settings'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                if (child == null)
+                  EmptyState(
+                    icon: Icons.child_care_rounded,
+                    title: 'Choose a learning profile',
+                    message:
+                        'Create or select a child profile before browsing lessons.',
+                    action: FilledButton.icon(
+                      onPressed: () => context.push('/children'),
+                      icon: const Icon(Icons.person_add_alt_1_rounded),
+                      label: const Text('Manage profiles'),
+                    ),
+                  )
+                else
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final learnerColumn = _LearnerColumn(
+                        userName: user?.displayName ?? '',
+                        child: child,
+                        children: children,
+                      );
+                      final libraryColumn = _LibraryColumn(
+                        child: child,
+                        searchController: _searchController,
+                        onSearchChanged: () => setState(() {}),
+                        categories: _categories,
+                        lessons: lessons,
+                        categoryOf: _categoryFor,
+                        selectedCategory: _category,
+                        onCategorySelected: (value) =>
+                            setState(() => _category = value),
+                        filteredLessons: filteredLessons,
+                        loading: lessonsState?.isLoading ?? false,
+                        error: lessonsState?.hasError ?? false
+                            ? lessonsState!.error.toString()
+                            : null,
+                        onRetry: () =>
+                            ref.invalidate(lessonsProvider(child.id)),
+                        onClearFilters: () {
+                          _searchController.clear();
+                          setState(() => _category = 'All');
+                        },
+                      );
+                      if (constraints.maxWidth < 760) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            learnerColumn,
+                            const SizedBox(height: 26),
+                            libraryColumn,
+                          ],
+                        );
+                      }
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          learnerColumn,
-                          const SizedBox(height: 26),
-                          libraryColumn,
+                          SizedBox(width: 250, child: learnerColumn),
+                          const SizedBox(width: 36),
+                          Expanded(child: libraryColumn),
                         ],
                       );
-                    }
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(width: 250, child: learnerColumn),
-                        const SizedBox(width: 36),
-                        Expanded(child: libraryColumn),
-                      ],
-                    );
-                  },
-                ),
-            ],
+                    },
+                  ),
+              ],
             ),
           ),
         ),
@@ -1282,6 +1280,7 @@ class _LearnerColumn extends ConsumerWidget {
                   ChildAvatar(
                     name: child.name,
                     photoUrl: child.photoUrl,
+                    gender: child.gender,
                     radius: 25,
                   ),
                   const SizedBox(width: 12),
@@ -1629,38 +1628,38 @@ class _SkillIndexItem extends StatelessWidget {
           ),
         ),
         child: Row(
-            children: [
-              Text(
-                index.toString().padLeft(2, '0'),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: selected
-                      ? AppTheme.brandViolet
-                      : theme.colorScheme.onSurfaceVariant,
+          children: [
+            Text(
+              index.toString().padLeft(2, '0'),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: selected
+                    ? AppTheme.brandViolet
+                    : theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w900,
+                  color: selected ? AppTheme.brandViolet : null,
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    color: selected ? AppTheme.brandViolet : null,
-                  ),
-                ),
+            ),
+            Text(
+              '$count',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w800,
               ),
-              Text(
-                '$count',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
     );
   }
 }
@@ -1823,47 +1822,51 @@ class _ActivityTile extends StatelessWidget {
     final theme = Theme.of(context);
     return HoverLift(
       child: Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppTheme.radius),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: theme.colorScheme.primaryContainer,
-                foregroundColor: theme.colorScheme.onPrimaryContainer,
-                child: Text(
-                  '$index',
-                  style: const TextStyle(fontWeight: FontWeight.w800),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.radius),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  foregroundColor: theme.colorScheme.onPrimaryContainer,
+                  child: Text(
+                    '$index',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.titleMedium,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: theme.textTheme.titleMedium,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton.tonal(onPressed: onTap, child: Text(buttonLabel)),
-            ],
+                const SizedBox(width: 8),
+                FilledButton.tonal(
+                  onPressed: onTap,
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
+                  child: Text(buttonLabel),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -1897,7 +1900,6 @@ class _LessonGeneratorScreenState extends ConsumerState<LessonGeneratorScreen> {
   LessonDifficulty _difficulty = LessonDifficulty.easy;
   String _language = 'English';
   String _category = 'Daily Living Skills';
-  double _duration = 15;
   String _contentType = ProfileOptions.contentTypes.first;
   String _videoDurationLabel = ProfileOptions.videoDurations.keys.first;
   final SpeechToText _speech = SpeechToText();
@@ -1947,7 +1949,7 @@ class _LessonGeneratorScreenState extends ConsumerState<LessonGeneratorScreen> {
       body: SceneBackground(
         scene: SceneKind.create,
         child: ResponsiveBody(
-          maxWidth: 1120,
+          maxWidth: 1500,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: ListView(
             children: [
@@ -1979,10 +1981,7 @@ class _LessonGeneratorScreenState extends ConsumerState<LessonGeneratorScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _LearnerStrip(
-                            child: child,
-                            children: children,
-                          ),
+                          _LearnerStrip(child: child, children: children),
                           const SizedBox(height: 20),
                           _StationPanel(
                             number: 1,
@@ -2041,9 +2040,7 @@ class _LessonGeneratorScreenState extends ConsumerState<LessonGeneratorScreen> {
                                   initialValue: _category,
                                   decoration: const InputDecoration(
                                     labelText: 'Lesson category',
-                                    prefixIcon: Icon(
-                                      Icons.menu_book_outlined,
-                                    ),
+                                    prefixIcon: Icon(Icons.menu_book_outlined),
                                   ),
                                   items:
                                       const [
@@ -2066,9 +2063,7 @@ class _LessonGeneratorScreenState extends ConsumerState<LessonGeneratorScreen> {
                                 const SizedBox(height: 18),
                                 Text(
                                   'Difficulty',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleSmall
+                                  style: Theme.of(context).textTheme.titleSmall
                                       ?.copyWith(fontWeight: FontWeight.w800),
                                 ),
                                 const SizedBox(height: 8),
@@ -2089,9 +2084,7 @@ class _LessonGeneratorScreenState extends ConsumerState<LessonGeneratorScreen> {
                                     ButtonSegment(
                                       value: LessonDifficulty.challenging,
                                       label: Text('Challenge'),
-                                      icon: Icon(
-                                        Icons.rocket_launch_rounded,
-                                      ),
+                                      icon: Icon(Icons.rocket_launch_rounded),
                                     ),
                                   ],
                                   selected: {_difficulty},
@@ -2117,34 +2110,6 @@ class _LessonGeneratorScreenState extends ConsumerState<LessonGeneratorScreen> {
                                       setState(() => _language = value!),
                                 ),
                                 const SizedBox(height: 18),
-                                Text(
-                                  'Duration: ${_duration.round()} minutes',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleSmall
-                                      ?.copyWith(fontWeight: FontWeight.w800),
-                                ),
-                                const SizedBox(height: 8),
-                                SegmentedButton<double>(
-                                  segments: const [
-                                    ButtonSegment(
-                                      value: 5,
-                                      label: Text('5 min'),
-                                    ),
-                                    ButtonSegment(
-                                      value: 10,
-                                      label: Text('10 min'),
-                                    ),
-                                    ButtonSegment(
-                                      value: 15,
-                                      label: Text('15 min'),
-                                    ),
-                                  ],
-                                  selected: {_duration},
-                                  onSelectionChanged: (value) =>
-                                      setState(() => _duration = value.first),
-                                ),
-                                const SizedBox(height: 18),
                                 DropdownButtonFormField<String>(
                                   initialValue: _contentType,
                                   decoration: const InputDecoration(
@@ -2166,11 +2131,19 @@ class _LessonGeneratorScreenState extends ConsumerState<LessonGeneratorScreen> {
                                 ),
                                 const SizedBox(height: 18),
                                 Text(
-                                  'Video length',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleSmall
+                                  'Duration',
+                                  style: Theme.of(context).textTheme.titleSmall
                                       ?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'How long the lesson and its video should be.',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
                                 ),
                                 const SizedBox(height: 8),
                                 Wrap(
@@ -2278,9 +2251,9 @@ class _LessonGeneratorScreenState extends ConsumerState<LessonGeneratorScreen> {
                                             .textTheme
                                             .bodySmall
                                             ?.copyWith(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.onSurfaceVariant,
                                             ),
                                       ),
                                     ],
@@ -2291,57 +2264,61 @@ class _LessonGeneratorScreenState extends ConsumerState<LessonGeneratorScreen> {
                           ),
                           const SizedBox(height: 14),
                           BouncyTap(
-                          scale: .97,
-                          child: FilledButton.icon(
-                            onPressed: busy
-                                ? null
-                                : () async {
-                                    if (!_formKey.currentState!.validate()) {
-                                      return;
-                                    }
-                                    final request = LessonRequest(
-                                      id: const Uuid().v4(),
-                                      childId: child.id,
-                                      goal: _goal.text.trim(),
-                                      difficulty: _difficulty,
-                                      language: _language,
-                                      durationMinutes: _duration.round(),
-                                      additionalNotes: _notes.text.trim(),
-                                      createdAt: DateTime.now(),
-                                      contentType: _contentType,
-                                      videoDurationSeconds:
-                                          ProfileOptions.videoDurations[_videoDurationLabel] ??
-                                          60,
-                                    );
-                                    try {
-                                      final lesson = await ref
-                                          .read(
-                                            lessonControllerProvider.notifier,
-                                          )
-                                          .generate(request, child);
-                                      if (context.mounted) {
-                                        context.push(
-                                          '/lesson/${lesson.id}',
-                                          extra: lesson,
-                                        );
+                            scale: .97,
+                            child: FilledButton.icon(
+                              onPressed: busy
+                                  ? null
+                                  : () async {
+                                      if (!_formKey.currentState!.validate()) {
+                                        return;
                                       }
-                                    } catch (error) {
-                                      if (context.mounted) {
-                                        showMessage(
-                                          context,
-                                          error.toString(),
-                                          error: true,
-                                        );
+                                      final videoDurationSeconds =
+                                          ProfileOptions
+                                              .videoDurations[_videoDurationLabel] ??
+                                          60;
+                                      final request = LessonRequest(
+                                        id: const Uuid().v4(),
+                                        childId: child.id,
+                                        goal: _goal.text.trim(),
+                                        difficulty: _difficulty,
+                                        language: _language,
+                                        durationMinutes:
+                                            videoDurationSeconds ~/ 60,
+                                        additionalNotes: _notes.text.trim(),
+                                        createdAt: DateTime.now(),
+                                        contentType: _contentType,
+                                        videoDurationSeconds:
+                                            videoDurationSeconds,
+                                      );
+                                      try {
+                                        final lesson = await ref
+                                            .read(
+                                              lessonControllerProvider.notifier,
+                                            )
+                                            .generate(request, child);
+                                        if (context.mounted) {
+                                          context.push(
+                                            '/lesson/${lesson.id}',
+                                            extra: lesson,
+                                          );
+                                        }
+                                      } catch (error) {
+                                        if (context.mounted) {
+                                          showMessage(
+                                            context,
+                                            error.toString(),
+                                            error: true,
+                                          );
+                                        }
                                       }
-                                    }
-                                  },
-                            icon: const GeminiSparkleIcon(),
-                            label: Text(
-                              busy
-                                  ? 'Creating personalized lesson…'
-                                  : 'Create personalized lesson',
+                                    },
+                              icon: const GeminiSparkleIcon(),
+                              label: Text(
+                                busy
+                                    ? 'Creating personalized lesson…'
+                                    : 'Create personalized lesson',
+                              ),
                             ),
-                          ),
                           ),
                           const SizedBox(height: 24),
                         ],
@@ -2397,7 +2374,12 @@ class _LearnerStrip extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          ChildAvatar(name: child.name, photoUrl: child.photoUrl, radius: 22),
+          ChildAvatar(
+            name: child.name,
+            photoUrl: child.photoUrl,
+            gender: child.gender,
+            radius: 22,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: RichText(
@@ -2413,9 +2395,7 @@ class _LearnerStrip extends ConsumerWidget {
                   ),
                   TextSpan(
                     text: '\nAge ${child.age} · ${child.gender}',
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+                    style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -2618,9 +2598,7 @@ class _LessonBriefPanel extends StatelessWidget {
                         children: [
                           Text(
                             feature.title,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w900),
                           ),
                           Text(
                             feature.description,
@@ -2674,10 +2652,7 @@ class _LessonBriefPanel extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.favorite_rounded,
-                color: AppTheme.brandViolet,
-              ),
+              const Icon(Icons.favorite_rounded, color: AppTheme.brandViolet),
               const SizedBox(width: 12),
               Expanded(
                 child: RichText(
@@ -2777,17 +2752,25 @@ class LessonDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<LessonDetailScreen> createState() => _LessonDetailScreenState();
 }
 
-class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 8, vsync: this);
+class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
+  bool _showVideo = false;
   final FlutterTts _tts = FlutterTts();
   final Map<int, int> _answers = {};
   int _minutes = 0;
   late final Stopwatch _stopwatch = Stopwatch()..start();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && ref.read(accessibilityProvider).textToSpeech) {
+        _tts.speak(widget.lesson.content.story);
+      }
+    });
+  }
+
+  @override
   void dispose() {
-    _tabs.dispose();
     _tts.stop();
     _stopwatch.stop();
     super.dispose();
@@ -2823,12 +2806,180 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen>
       );
   }
 
+  Widget _buildCardsSection(LessonContent content) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      for (final card in content.flashcards) ...[
+        _FlipCard(card: card),
+        const SizedBox(height: 12),
+      ],
+    ],
+  );
+
+  Widget _buildQuizSection(BuildContext context, LessonContent content) {
+    final answered = _answers.length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Answered $answered of ${content.quiz.length}',
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: content.quiz.isEmpty ? 1 : answered / content.quiz.length,
+            minHeight: 8,
+          ),
+        ),
+        const SizedBox(height: 16),
+        for (final (index, question) in content.quiz.indexed) ...[
+          Builder(
+            builder: (context) {
+              final answer = _answers[index];
+              final correct = answer == question.correctIndex;
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${index + 1}. ${question.question}',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      ...question.options.indexed.map(
+                        (option) => RadioListTile<int>(
+                          value: option.$1,
+                          groupValue: answer,
+                          onChanged: (value) =>
+                              setState(() => _answers[index] = value!),
+                          title: Text(option.$2),
+                        ),
+                      ),
+                      if (answer != null)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(top: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            color: correct
+                                ? Colors.green.withValues(alpha: .12)
+                                : Theme.of(context).colorScheme.errorContainer,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                correct
+                                    ? Icons.check_circle_rounded
+                                    : Icons.refresh_rounded,
+                                color: correct
+                                    ? Colors.green.shade700
+                                    : Theme.of(
+                                        context,
+                                      ).colorScheme.onErrorContainer,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  correct
+                                      ? 'Correct! ${question.explanation}'
+                                      : 'Keep trying. ${question.explanation}',
+                                  style: TextStyle(
+                                    color: correct
+                                        ? Colors.green.shade900
+                                        : Theme.of(
+                                            context,
+                                          ).colorScheme.onErrorContainer,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildParentsSection(BuildContext context, LessonContent content) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Daily activity',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.radius),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(height: 4, color: AppTheme.brandTeal),
+                Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Text(content.dailyActivity),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Parent tips',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          ...content.parentTips.map(
+            (tip) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Card(
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: AppTheme.brandPink.withValues(alpha: .16),
+                    foregroundColor: AppTheme.brandPink,
+                    child: const Icon(Icons.lightbulb_rounded),
+                  ),
+                  title: Text(tip),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+
   @override
   Widget build(BuildContext context) {
     final content = widget.lesson.content;
     final child = activeChild(ref);
+    final contentHeight = (MediaQuery.sizeOf(context).height * 0.55).clamp(
+      420.0,
+      640.0,
+    );
     return Scaffold(
       backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: Text(
@@ -2845,206 +2996,87 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen>
       body: SceneBackground(
         scene: SceneKind.learn,
         child: ResponsiveBody(
-          maxWidth: 900,
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          maxWidth: 1300,
+          padding: const EdgeInsets.fromLTRB(16, 80, 16, 96),
+          child: ListView(
             children: [
-              _LessonMetaHeader(content: content, request: widget.lesson.request),
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(AppTheme.radius),
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.outlineVariant,
-                  ),
-                ),
-                child: TabBar(
-                  controller: _tabs,
-                  isScrollable: true,
-                  tabAlignment: TabAlignment.start,
-                  dividerColor: Colors.transparent,
-                  indicator: BoxDecoration(
-                    color: AppTheme.brandViolet,
-                    borderRadius: BorderRadius.circular(AppTheme.radius),
-                  ),
-                  labelColor: Colors.white,
-                  unselectedLabelColor:
-                      Theme.of(context).colorScheme.onSurfaceVariant,
-                  tabs: const [
-                    Tab(text: 'Story', icon: Icon(Icons.auto_stories_rounded)),
-                    Tab(text: 'Video', icon: Icon(Icons.smart_display_rounded)),
-                    Tab(text: '3D Model', icon: Icon(Icons.view_in_ar_rounded)),
-                    Tab(text: 'Cards', icon: Icon(Icons.style_rounded)),
-                    Tab(text: 'Quiz', icon: Icon(Icons.quiz_rounded)),
-                    Tab(text: 'Memory', icon: Icon(Icons.psychology_rounded)),
-                    Tab(text: 'Match', icon: Icon(Icons.compare_arrows_rounded)),
-                    Tab(
-                      text: 'For Parents',
-                      icon: Icon(Icons.family_restroom_rounded),
+              _LessonMetaHeader(
+                content: content,
+                request: widget.lesson.request,
+              ),
+              const SizedBox(height: 18),
+              Center(
+                child: SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(
+                      value: false,
+                      label: Text('Story'),
+                      icon: Icon(Icons.auto_stories_rounded),
+                    ),
+                    ButtonSegment(
+                      value: true,
+                      label: Text('Video'),
+                      icon: Icon(Icons.smart_display_rounded),
                     ),
                   ],
+                  selected: {_showVideo},
+                  onSelectionChanged: (value) =>
+                      setState(() => _showVideo = value.first),
                 ),
               ),
               const SizedBox(height: 16),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabs,
-                  children: [
-                    _StoryReadingSurface(
-                      content: content,
-                      onListen: () => _tts.speak(content.story),
-                      onStartLearning: () => _tabs.animateTo(2),
-                    ),
-                    _AnimatedVideoView(lesson: widget.lesson, child: child),
-            _LessonVideoView(lesson: widget.lesson, child: child),
-            ListView.separated(
-              itemCount: content.flashcards.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (_, index) =>
-                  _FlipCard(card: content.flashcards[index]),
-            ),
-            ListView.builder(
-              itemCount: content.quiz.length + 1,
-              itemBuilder: (context, position) {
-                if (position == 0) {
-                  final answered = _answers.length;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Answered $answered of ${content.quiz.length}',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        LinearProgressIndicator(
-                          value: content.quiz.isEmpty
-                              ? 1
-                              : answered / content.quiz.length,
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                final index = position - 1;
-                final question = content.quiz[index];
-                final answer = _answers[index];
-                final correct = answer == question.correctIndex;
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${index + 1}. ${question.question}',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        ...question.options.indexed.map(
-                          (option) => RadioListTile<int>(
-                            value: option.$1,
-                            groupValue: answer,
-                            onChanged: (value) =>
-                                setState(() => _answers[index] = value!),
-                            title: Text(option.$2),
-                          ),
-                        ),
-                        if (answer != null)
-                          Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(top: 8),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(14),
-                              color: correct
-                                  ? Colors.green.withValues(alpha: .12)
-                                  : Theme.of(
-                                      context,
-                                    ).colorScheme.errorContainer,
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(
-                                  correct
-                                      ? Icons.check_circle_rounded
-                                      : Icons.refresh_rounded,
-                                  color: correct
-                                      ? Colors.green.shade700
-                                      : Theme.of(
-                                          context,
-                                        ).colorScheme.onErrorContainer,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    correct
-                                        ? 'Correct! ${question.explanation}'
-                                        : 'Keep trying. ${question.explanation}',
-                                    style: TextStyle(
-                                      color: correct
-                                          ? Colors.green.shade900
-                                          : Theme.of(
-                                              context,
-                                            ).colorScheme.onErrorContainer,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-            _PairsView(
-              title: 'Find each memory pair',
-              pairs: content.memoryGame,
-            ),
-            _PairsView(
-              title: 'Match each item',
-              pairs: content.matchingActivity,
-            ),
-            ListView(
-              children: [
-                Text(
-                  'Daily activity',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 10),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Text(content.dailyActivity),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Parent tips',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                ...content.parentTips.map(
-                  (tip) => Card(
-                    child: ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.lightbulb_rounded),
+              SizedBox(
+                height: contentHeight,
+                child: _showVideo
+                    ? _AnimatedVideoView(lesson: widget.lesson, child: child)
+                    : _StoryReadingSurface(
+                        content: content,
+                        onListen: () => _tts.speak(content.story),
+                        onStartLearning: () =>
+                            setState(() => _showVideo = true),
                       ),
-                      title: Text(tip),
-                    ),
-                  ),
+              ),
+              const SizedBox(height: 28),
+              const SectionHeading(
+                eyebrow: 'Practice & explore',
+                title: 'More ways to learn',
+              ),
+              const SizedBox(height: 10),
+              _PracticeSection(
+                icon: Icons.style_rounded,
+                color: AppTheme.brandCoral,
+                title: 'Cards',
+                child: _buildCardsSection(content),
+              ),
+              _PracticeSection(
+                icon: Icons.quiz_rounded,
+                color: AppTheme.brandViolet,
+                title: 'Quiz',
+                child: _buildQuizSection(context, content),
+              ),
+              _PracticeSection(
+                icon: Icons.psychology_rounded,
+                color: AppTheme.brandTeal,
+                title: 'Memory',
+                child: _PairsView(
+                  title: 'Find each memory pair',
+                  pairs: content.memoryGame,
                 ),
-              ],
-            ),
-                  ],
+              ),
+              _PracticeSection(
+                icon: Icons.compare_arrows_rounded,
+                color: AppTheme.brandAmber,
+                title: 'Match',
+                child: _PairsView(
+                  title: 'Match each item',
+                  pairs: content.matchingActivity,
                 ),
+              ),
+              _PracticeSection(
+                icon: Icons.family_restroom_rounded,
+                color: AppTheme.brandPink,
+                title: 'For Parents',
+                child: _buildParentsSection(context, content),
               ),
             ],
           ),
@@ -3054,74 +3086,179 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen>
   }
 }
 
-/// Compact lesson header: an eyebrow, the lesson title/summary, and meta
-/// chips, echoing the Kombai "Guided Story" lesson-detail concept.
+/// One collapsible row in the Lesson Detail "Practice & explore" section —
+/// keeps Cards, Quiz, Memory, Match, and For Parents reachable without
+/// competing with Story/Video for the primary tab selector.
+class _PracticeSection extends StatelessWidget {
+  const _PracticeSection({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.child,
+  });
+  final IconData icon;
+  final Color color;
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radius),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          leading: CircleAvatar(
+            backgroundColor: color.withValues(alpha: .16),
+            foregroundColor: color,
+            child: Icon(icon, size: 20),
+          ),
+          title: Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          children: [child],
+        ),
+      ),
+    ),
+  );
+}
+
+/// Gradient lesson header: an icon badge, colorful bubble title, summary,
+/// and pill-shaped meta badges, matching the hero-banner language used
+/// across every other screen in the app.
 class _LessonMetaHeader extends StatelessWidget {
   const _LessonMetaHeader({required this.content, required this.request});
   final LessonContent content;
   final LessonRequest request;
 
+  static const _difficultyIcons = {
+    LessonDifficulty.easy: Icons.sentiment_satisfied_rounded,
+    LessonDifficulty.medium: Icons.trending_up_rounded,
+    LessonDifficulty.challenging: Icons.rocket_launch_rounded,
+  };
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(AppTheme.radius),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-        boxShadow: AppTheme.softShadow(context),
+        gradient: AppTheme.heroGradient(context),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.brandViolet.withValues(alpha: .24),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+            spreadRadius: -10,
+          ),
+        ],
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'LESSON',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: AppTheme.brandViolet,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.4,
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .18),
+              borderRadius: BorderRadius.circular(AppTheme.radius),
+              border: Border.all(color: Colors.white.withValues(alpha: .25)),
+            ),
+            child: const Icon(
+              Icons.auto_stories_rounded,
+              color: Colors.white,
+              size: 26,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            content.title,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            content.summary,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 10,
-            runSpacing: 4,
-            children: [
-              Text(
-                request.difficulty.name,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w800,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'LESSON',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: Colors.white.withValues(alpha: .85),
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.4,
+                  ),
                 ),
-              ),
-              Text(
-                '${request.durationMinutes} min',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w800,
+                const SizedBox(height: 4),
+                ColorfulTitle(text: content.title, fontSize: 21),
+                const SizedBox(height: 6),
+                Text(
+                  content.summary,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: .92),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _MetaPill(
+                      icon:
+                          _difficultyIcons[request.difficulty] ??
+                          Icons.sentiment_satisfied_rounded,
+                      label:
+                          request.difficulty.name[0].toUpperCase() +
+                          request.difficulty.name.substring(1),
+                    ),
+                    _MetaPill(
+                      icon: Icons.schedule_rounded,
+                      label: '${request.durationMinutes} min',
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+/// Small translucent pill badge used to show a lesson's meta facts (
+/// difficulty, duration) over the gradient [_LessonMetaHeader].
+class _MetaPill extends StatelessWidget {
+  const _MetaPill({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: .2),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: Colors.white.withValues(alpha: .3)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: Colors.white),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 /// The Story tab's reading pane: a paper-styled story card with a listen
@@ -3162,16 +3299,36 @@ class _StoryReadingSurface extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Container(
-          padding: const EdgeInsets.all(24),
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(AppTheme.radius),
             border: Border.all(color: theme.colorScheme.outlineVariant),
             boxShadow: AppTheme.softShadow(context),
           ),
-          child: Text(
-            content.story,
-            style: theme.textTheme.titleMedium?.copyWith(height: 1.7),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                height: 4,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppTheme.brandViolet,
+                      AppTheme.brandPink,
+                      AppTheme.brandCoral,
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  content.story,
+                  style: theme.textTheme.titleMedium?.copyWith(height: 1.7),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
@@ -3215,186 +3372,6 @@ class _StoryReadingSurface extends StatelessWidget {
   }
 }
 
-class _LessonVideoView extends ConsumerStatefulWidget {
-  const _LessonVideoView({required this.lesson, required this.child});
-
-  final Lesson lesson;
-  final ChildProfile? child;
-
-  @override
-  ConsumerState<_LessonVideoView> createState() => _LessonVideoViewState();
-}
-
-class _LessonVideoViewState extends ConsumerState<_LessonVideoView> {
-  VideoGeneration? _generation;
-  String? _modelUrl;
-  bool _busy = false;
-  String? _error;
-
-  Future<void> _generate() async {
-    final provider = ref.read(aiVideoProvider);
-    if (provider == null) {
-      setState(() => _error = 'Connect Supabase to generate AI 3D models.');
-      return;
-    }
-    final child = widget.child;
-    if (child == null) {
-      setState(() => _error = 'Choose a child to personalize this model.');
-      return;
-    }
-
-    setState(() {
-      _modelUrl = null;
-      _generation = null;
-      _error = null;
-      _busy = true;
-    });
-
-    try {
-      var generation = await provider.create(widget.lesson, child);
-      if (!mounted) return;
-      setState(() => _generation = generation);
-
-      while (mounted && !generation.isComplete && !generation.isFailed) {
-        await Future<void>.delayed(const Duration(seconds: 10));
-        if (!mounted) return;
-        generation = await provider.getStatus(generation.id);
-        setState(() => _generation = generation);
-      }
-
-      if (!mounted) return;
-      if (generation.isFailed) {
-        throw Exception(generation.error ?? 'The 3D model render failed.');
-      }
-      final modelUrl = generation.modelUrl;
-      if (modelUrl == null) {
-        throw Exception('The model finished without a downloadable file.');
-      }
-      setState(() => _modelUrl = modelUrl);
-    } catch (error) {
-      if (mounted) {
-        setState(
-          () => _error = error.toString().replaceFirst('Exception: ', ''),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final modelUrl = _modelUrl;
-    final generation = _generation;
-    return ListView(
-      children: [
-        if (modelUrl != null) ...[
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: SizedBox(
-              height: 320,
-              child: Flutter3DViewer(key: ValueKey(modelUrl), src: modelUrl),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: _busy ? null : _generate,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Try another'),
-            ),
-          ),
-        ] else ...[
-          if (widget.child case final child?) ...[
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const GeminiSparkleIcon(size: 28),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Made for ${child.name}',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            child.interests.isEmpty
-                                ? 'The 3D model will follow this lesson and ${child.preferredLanguage} preference.'
-                                : 'Inspired by ${child.interests.take(3).join(', ')} and ${child.preferredLanguage}.',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-          Container(
-            constraints: const BoxConstraints(minHeight: 240),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: _busy
-                  ? Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(
-                          value: (generation?.progress ?? 0) > 0
-                              ? generation!.progress / 100
-                              : null,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          generation?.status == 'in_progress'
-                              ? 'Rendering 3D model ${generation!.progress}%'
-                              : 'Preparing 3D model render',
-                        ),
-                      ],
-                    )
-                  : const Icon(Icons.view_in_ar_rounded, size: 64),
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (_error != null) ...[
-            Text(
-              _error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-          ],
-          FilledButton.icon(
-            onPressed: _busy ? null : _generate,
-            icon: const GeminiSparkleIcon(),
-            label: Text(
-              widget.child == null
-                  ? 'Choose a child to create a 3D model'
-                  : 'Create personalized 3D model',
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
 class _AnimatedVideoView extends ConsumerStatefulWidget {
   const _AnimatedVideoView({required this.lesson, required this.child});
 
@@ -3402,8 +3379,7 @@ class _AnimatedVideoView extends ConsumerStatefulWidget {
   final ChildProfile? child;
 
   @override
-  ConsumerState<_AnimatedVideoView> createState() =>
-      _AnimatedVideoViewState();
+  ConsumerState<_AnimatedVideoView> createState() => _AnimatedVideoViewState();
 }
 
 class _AnimatedVideoViewState extends ConsumerState<_AnimatedVideoView> {
@@ -3412,6 +3388,15 @@ class _AnimatedVideoViewState extends ConsumerState<_AnimatedVideoView> {
   int _sceneIndex = 0;
   String? _error;
 
+  /// `video_player` only ships a working engine for web, Android, iOS, and
+  /// macOS — there is no Windows or Linux desktop implementation, so
+  /// attempting playback there hangs forever instead of erroring.
+  static bool get _videoPlaybackSupported =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+
   @override
   void dispose() {
     _player?.dispose();
@@ -3419,9 +3404,9 @@ class _AnimatedVideoViewState extends ConsumerState<_AnimatedVideoView> {
   }
 
   Future<void> _playScenes(List<GeneratedVideoScene> scenes) async {
-    final completed =
-        scenes.where((scene) => scene.videoUrl != null).toList()
-          ..sort((a, b) => a.sceneNumber.compareTo(b.sceneNumber));
+    if (!_videoPlaybackSupported) return;
+    final completed = scenes.where((scene) => scene.videoUrl != null).toList()
+      ..sort((a, b) => a.sceneNumber.compareTo(b.sceneNumber));
     if (completed.isEmpty) return;
     if (_sceneIndex >= completed.length) _sceneIndex = 0;
     final url = completed[_sceneIndex].videoUrl!;
@@ -3518,10 +3503,26 @@ class _AnimatedVideoViewState extends ConsumerState<_AnimatedVideoView> {
           return ListView(
             children: [
               const SizedBox(height: 24),
-              Icon(
-                Icons.smart_display_rounded,
-                size: 72,
-                color: Theme.of(context).colorScheme.primary,
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppTheme.brandViolet.withValues(alpha: .25),
+                        AppTheme.brandPink.withValues(alpha: .25),
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.smart_display_rounded,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
               Text(
@@ -3534,9 +3535,7 @@ class _AnimatedVideoViewState extends ConsumerState<_AnimatedVideoView> {
                 Text(
                   _error!,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 const SizedBox(height: 12),
               ],
@@ -3552,20 +3551,95 @@ class _AnimatedVideoViewState extends ConsumerState<_AnimatedVideoView> {
         }
 
         if (job.status == VideoGenerationStatus.completed) {
+          final currentSceneNumber = job.scenes.isEmpty
+              ? null
+              : job
+                    .scenes[_sceneIndex.clamp(0, job.scenes.length - 1)]
+                    .sceneNumber;
+          final caption = widget.lesson.content.videoScript
+              .where((scene) => scene.sceneNumber == currentSceneNumber)
+              .firstOrNull
+              ?.narration;
+
+          if (!_videoPlaybackSupported) {
+            return ListView(
+              children: [
+                const SizedBox(height: 24),
+                Icon(
+                  Icons.desktop_windows_outlined,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Video playback isn’t available on this device yet',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'The lesson video finished rendering, but this platform '
+                  'can’t play it back. Try the web or mobile app to '
+                  'watch it, or read the scene below.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (caption != null && caption.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(AppTheme.radius),
+                    ),
+                    child: Text(caption, textAlign: TextAlign.center),
+                  ),
+                ],
+              ],
+            );
+          }
+
           _playScenes(job.scenes);
           final player = _player;
+          final showCaptions = ref.watch(
+            accessibilityProvider.select((value) => value.closedCaptions),
+          );
           return ListView(
             children: [
-              if (player != null && player.value.isInitialized)
-                AspectRatio(
-                  aspectRatio: player.value.aspectRatio,
-                  child: VideoPlayer(player),
-                )
-              else
-                const SizedBox(
-                  height: 220,
-                  child: Center(child: CircularProgressIndicator()),
-                ),
+              Stack(
+                alignment: Alignment.bottomCenter,
+                children: [
+                  if (player != null && player.value.isInitialized)
+                    AspectRatio(
+                      aspectRatio: player.value.aspectRatio,
+                      child: VideoPlayer(player),
+                    )
+                  else
+                    const SizedBox(
+                      height: 220,
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  if (showCaptions && caption != null && caption.isNotEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      color: Colors.black.withValues(alpha: .7),
+                      child: Text(
+                        caption,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
               const SizedBox(height: 12),
               Text(
                 'Scene ${_sceneIndex + 1} of ${job.scenes.length}',
@@ -3601,9 +3675,7 @@ class _AnimatedVideoViewState extends ConsumerState<_AnimatedVideoView> {
               FilledButton.icon(
                 onPressed: busy ? null : () => _retry(job.id),
                 icon: const Icon(Icons.refresh_rounded),
-                label: Text(
-                  busy ? 'Retrying…' : 'Retry video generation',
-                ),
+                label: Text(busy ? 'Retrying…' : 'Retry video generation'),
               ),
             ],
           );
@@ -3735,36 +3807,66 @@ class _PairsView extends StatelessWidget {
   final String title;
   final List<ActivityPair> pairs;
   @override
-  Widget build(BuildContext context) => ListView(
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      Text(title, style: Theme.of(context).textTheme.headlineSmall),
-      const SizedBox(height: 14),
+      Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+      const SizedBox(height: 12),
       ...pairs.map(
-        (pair) => Card(
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    pair.left,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
+        (pair) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _PairChip(
+                      label: pair.left,
+                      color: AppTheme.brandViolet,
+                    ),
                   ),
-                ),
-                const Icon(Icons.sync_alt_rounded),
-                Expanded(
-                  child: Text(
-                    pair.right,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Icon(
+                      Icons.sync_alt_rounded,
+                      color: AppTheme.brandCoral,
+                    ),
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: _PairChip(
+                      label: pair.right,
+                      color: AppTheme.brandTeal,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
     ],
+  );
+}
+
+/// Colored pill used for one side of a memory/matching pair.
+class _PairChip extends StatelessWidget {
+  const _PairChip({required this.label, required this.color});
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .1),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: color.withValues(alpha: .3)),
+    ),
+    child: Text(
+      label,
+      textAlign: TextAlign.center,
+      style: TextStyle(fontWeight: FontWeight.w800, color: color),
+    ),
   );
 }

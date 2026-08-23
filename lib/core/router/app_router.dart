@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,23 +11,19 @@ import '../../presentation/screens/learning_screens.dart';
 import '../../presentation/screens/support_screens.dart';
 import '../../presentation/widgets/app_shell.dart';
 
-/// Converts a stream into a GoRouter refresh signal.
-class RouterRefreshNotifier extends ChangeNotifier {
-  RouterRefreshNotifier(Stream<Object?> stream) {
-    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
-  }
-  late final StreamSubscription<Object?> _subscription;
-  @override
-  void dispose() {
-    _subscription.cancel();
-    super.dispose();
-  }
-}
-
 /// Provides declarative, session-aware application routing.
 final routerProvider = Provider<GoRouter>((ref) {
-  final auth = ref.watch(authRepositoryProvider);
-  final refresh = RouterRefreshNotifier(auth.watchUser());
+  // Ties GoRouter's refresh signal directly to [authStateProvider] — the
+  // same provider `redirect` reads below — instead of a second, independent
+  // subscription to the auth stream. Two separate subscriptions raced: the
+  // standalone one could resolve and notify before GoRouter had finished
+  // attaching as a listener, silently dropping the one signal that mattered
+  // and leaving a signed-out user stuck on the initial route forever.
+  final refresh = ValueNotifier(0);
+  ref.listen<AsyncValue<AppUser?>>(
+    authStateProvider,
+    (_, _) => refresh.value++,
+  );
   ref.onDispose(refresh.dispose);
   return GoRouter(
     initialLocation: '/home',

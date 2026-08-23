@@ -15,8 +15,7 @@ class WordExplorerScreen extends ConsumerStatefulWidget {
   const WordExplorerScreen({super.key});
 
   @override
-  ConsumerState<WordExplorerScreen> createState() =>
-      _WordExplorerScreenState();
+  ConsumerState<WordExplorerScreen> createState() => _WordExplorerScreenState();
 }
 
 class _WordExplorerScreenState extends ConsumerState<WordExplorerScreen> {
@@ -49,7 +48,7 @@ class _WordExplorerScreenState extends ConsumerState<WordExplorerScreen> {
       body: SceneBackground(
         scene: SceneKind.dictionary,
         child: ResponsiveBody(
-          maxWidth: 720,
+          maxWidth: 820,
           padding: const EdgeInsets.fromLTRB(20, 80, 20, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -63,10 +62,7 @@ class _WordExplorerScreenState extends ConsumerState<WordExplorerScreen> {
                     'word to see phonetics, meanings, and examples.',
               ),
               const SizedBox(height: 16),
-              _SearchField(
-                controller: _controller,
-                onSubmitted: _search,
-              ),
+              _SearchField(controller: _controller, onSubmitted: _search),
               const SizedBox(height: 8),
               _WordSuggestions(controller: _controller, onSearch: _search),
               const SizedBox(height: 12),
@@ -149,8 +145,10 @@ class _SearchField extends StatelessWidget {
               ),
             ),
           ),
-          suffixIconConstraints:
-              const BoxConstraints(minHeight: 40, minWidth: 120),
+          suffixIconConstraints: const BoxConstraints(
+            minHeight: 40,
+            minWidth: 120,
+          ),
         ),
       ),
     );
@@ -186,9 +184,9 @@ class _WordSuggestions extends StatelessWidget {
               child: Text(
                 'Try:',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             );
           }
@@ -208,11 +206,7 @@ class _WordSuggestions extends StatelessWidget {
 }
 
 class _WordResult extends StatelessWidget {
-  const _WordResult({
-    super.key,
-    required this.definition,
-    required this.tts,
-  });
+  const _WordResult({super.key, required this.definition, required this.tts});
   final WordDefinition definition;
   final FlutterTts tts;
 
@@ -313,7 +307,10 @@ class _WordResult extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         for (final meaning in definition.meanings) ...[
-          _MeaningCard(meaning: meaning, accent: _accentFor(meaning.partOfSpeech)),
+          _MeaningCard(
+            meaning: meaning,
+            accent: _accentFor(meaning.partOfSpeech),
+          ),
           const SizedBox(height: 12),
         ],
       ],
@@ -382,10 +379,7 @@ class _MeaningCard extends StatelessWidget {
                       ),
                     ),
                     Expanded(
-                      child: Text(
-                        entry.$2,
-                        style: theme.textTheme.bodyLarge,
-                      ),
+                      child: Text(entry.$2, style: theme.textTheme.bodyLarge),
                     ),
                   ],
                 ),
@@ -401,9 +395,7 @@ class _MeaningCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: accent.withValues(alpha: .08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border(
-                      left: BorderSide(color: accent, width: 3),
-                    ),
+                    border: Border(left: BorderSide(color: accent, width: 3)),
                   ),
                   child: Text(
                     '“$example”',

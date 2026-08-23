@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
 import '../../application/providers.dart';
-import '../../core/config/app_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
-/// Shared visual frame for all authentication screens.
+/// Shared visual frame for all authentication screens, styled after
+/// Kombai's "calm centered form" concept and tuned for phones and tablets
+/// (a single scaling column rather than a desktop split layout).
 class AuthFrame extends StatelessWidget {
   const AuthFrame({
     super.key,
@@ -15,15 +17,33 @@ class AuthFrame extends StatelessWidget {
     required this.subtitle,
     required this.child,
     this.showBackButton = false,
+    this.eyebrow,
+    this.intro,
+    this.footNote,
   });
   final String title;
   final String subtitle;
   final Widget child;
   final bool showBackButton;
 
+  /// Small uppercase kicker shown above the card heading, e.g. "A calm
+  /// place to begin".
+  final String? eyebrow;
+
+  /// Short supporting line shown inside the card, above the form fields.
+  final String? intro;
+
+  /// Gentle closing caption printed under the card.
+  final String? footNote;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final width = MediaQuery.sizeOf(context).width;
+    final isTablet = width >= 700;
+    final cardMaxWidth = isTablet ? 560.0 : 440.0;
+    final cardPadding = isTablet ? 32.0 : 22.0;
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: showBackButton
@@ -57,15 +77,19 @@ class AuthFrame extends StatelessWidget {
             child: _softBlob(200, scheme.primary.withValues(alpha: .18)),
           ),
           ResponsiveBody(
-            maxWidth: 480,
+            maxWidth: cardMaxWidth,
+            padding: EdgeInsets.symmetric(
+              horizontal: isTablet ? 28 : 18,
+              vertical: 20,
+            ),
             child: SingleChildScrollView(
               child: AnimatedAppear(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 40),
-                    const Center(child: _AnimatedAuthLogo()),
-                    const SizedBox(height: 24),
+                    SizedBox(height: isTablet ? 52 : 36),
+                    Center(child: _AnimatedAuthLogo(size: isTablet ? 108 : 92)),
+                    const SizedBox(height: 22),
                     if (showBackButton) ...[
                       Text(
                         title,
@@ -79,47 +103,100 @@ class AuthFrame extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                     ] else ...[
-                      const Center(child: BubbleWordmark(fontSize: 40)),
+                      Center(
+                        child: BubbleWordmark(fontSize: isTablet ? 46 : 40),
+                      ),
                       const SizedBox(height: 14),
                       Center(child: TaglinePill(text: subtitle)),
                     ],
-                    const SizedBox(height: 30),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: child,
-                      ),
-                    ),
-                    if (!AppConfig.hasSupabase) ...[
-                      const SizedBox(height: 12),
-                      Card(
-                        color: Theme.of(context).colorScheme.tertiaryContainer,
-                        child: Padding(
-                          padding: const EdgeInsets.all(14),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.offline_bolt_rounded,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onTertiaryContainer,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  'Preview mode: cloud sync and Google login are disabled.',
-                                  style: TextStyle(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onTertiaryContainer,
-                                  ),
-                                ),
-                              ),
+                    const SizedBox(height: 20),
+                    Center(
+                      child: Container(
+                        width: 180,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          gradient: const LinearGradient(
+                            colors: [
+                              AppTheme.brandViolet,
+                              AppTheme.brandPink,
+                              AppTheme.brandCoral,
                             ],
                           ),
                         ),
                       ),
+                    ),
+                    SizedBox(height: isTablet ? 32 : 24),
+                    Card(
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Container(
+                            height: 4,
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppTheme.brandViolet,
+                                  AppTheme.brandPink,
+                                  AppTheme.brandCoral,
+                                ],
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              cardPadding,
+                              cardPadding,
+                              cardPadding,
+                              cardPadding - 4,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (eyebrow != null) ...[
+                                  Text(
+                                    eyebrow!.toUpperCase(),
+                                    style: const TextStyle(
+                                      color: AppTheme.brandViolet,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.6,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
+                                if (intro != null) ...[
+                                  Text(
+                                    intro!,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: scheme.onSurfaceVariant,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                ],
+                                child,
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (footNote != null) ...[
+                      const SizedBox(height: 18),
+                      Center(
+                        child: Text(
+                          footNote!,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      ),
                     ],
+                    SizedBox(height: isTablet ? 32 : 20),
                   ],
                 ),
               ),
@@ -142,7 +219,8 @@ class AuthFrame extends StatelessWidget {
 /// Breathing IKeriKin logo mark used at the top of every auth screen. Falls
 /// back to a static version when the user has requested reduced motion.
 class _AnimatedAuthLogo extends StatefulWidget {
-  const _AnimatedAuthLogo();
+  const _AnimatedAuthLogo({this.size = 92});
+  final double size;
 
   @override
   State<_AnimatedAuthLogo> createState() => _AnimatedAuthLogoState();
@@ -164,12 +242,12 @@ class _AnimatedAuthLogoState extends State<_AnimatedAuthLogo>
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final radius = widget.size * .26;
     Widget mark(double glow) => Container(
-      width: 92,
-      height: 92,
+      width: widget.size,
+      height: widget.size,
       decoration: BoxDecoration(
-        gradient: AppTheme.heroGradient(context),
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(radius),
         boxShadow: [
           BoxShadow(
             color: scheme.primary.withValues(alpha: .28 + .12 * glow),
@@ -179,7 +257,10 @@ class _AnimatedAuthLogoState extends State<_AnimatedAuthLogo>
           ),
         ],
       ),
-      child: const Icon(Icons.favorite_rounded, size: 48, color: Colors.white),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: Image.asset('assets/branding/app_icon.png', fit: BoxFit.cover),
+      ),
     );
 
     if (prefersReducedMotion(context)) return mark(0);
@@ -220,6 +301,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           .read(authControllerProvider.notifier)
           .signIn(_email.text, _password.text);
       if (mounted) context.go('/home');
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      if (error.code == 'email_not_confirmed') {
+        context.push('/verify-email', extra: _email.text.trim());
+      } else {
+        showMessage(context, error.message, error: true);
+      }
     } catch (error) {
       if (mounted) showMessage(context, error.toString(), error: true);
     }
@@ -231,6 +319,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return AuthFrame(
       title: 'Welcome to IKeriKin',
       subtitle: 'I Care for Your Kin',
+      eyebrow: 'A calm place to begin',
+      intro: 'Sign in to continue learning with your child.',
+      footNote: 'Made with care in the Philippines',
       child: Form(
         key: _formKey,
         child: Column(
@@ -285,7 +376,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       dimension: 22,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Sign in'),
+                  : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Sign in'),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward_rounded, size: 18),
+                      ],
+                    ),
             ),
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
@@ -357,6 +456,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       title: 'Create your account',
       subtitle: 'Start personalized learning for your child.',
       showBackButton: true,
+      eyebrow: 'Parent account',
+      footNote:
+          'Your child’s learning space starts with one small, caring step.',
       child: Form(
         key: _formKey,
         child: Column(
@@ -396,15 +498,30 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ? null
                   : 'Use at least 8 characters',
             ),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _accepted,
-              onChanged: (value) => setState(() => _accepted = value ?? false),
-              title: const Text('I agree to the Terms and Privacy Policy.'),
-              controlAffinity: ListTileControlAffinity.leading,
+            const SizedBox(height: 6),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withValues(alpha: .5),
+                borderRadius: BorderRadius.circular(AppTheme.radius),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
+              ),
+              child: CheckboxListTile(
+                value: _accepted,
+                onChanged: (value) =>
+                    setState(() => _accepted = value ?? false),
+                title: const Text('I agree to the Terms and Privacy Policy.'),
+                controlAffinity: ListTileControlAffinity.leading,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppTheme.radius),
+                ),
+              ),
             ),
-            const SizedBox(height: 8),
-            FilledButton(
+            const SizedBox(height: 12),
+            FilledButton.icon(
               onPressed: busy || !_accepted
                   ? null
                   : () async {
@@ -418,12 +535,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             '/verify-email',
                             extra: _email.text.trim(),
                           );
+                      } on AuthException catch (error) {
+                        if (context.mounted)
+                          showMessage(context, error.message, error: true);
                       } catch (error) {
                         if (context.mounted)
                           showMessage(context, error.toString(), error: true);
                       }
                     },
-              child: const Text('Create account'),
+              icon: busy
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.person_add_alt_1_rounded, size: 18),
+              label: const Text('Create account'),
             ),
             TextButton(
               onPressed: () => context.pop(),
@@ -457,6 +583,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     title: 'Reset your password',
     subtitle: 'We will email a secure reset link.',
     showBackButton: true,
+    eyebrow: 'Account recovery',
+    footNote: 'Password reset starts with your email address.',
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -480,6 +608,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   context,
                   'If that account exists, a reset link has been sent.',
                 );
+            } on AuthException catch (error) {
+              if (context.mounted)
+                showMessage(context, error.message, error: true);
             } catch (error) {
               if (context.mounted)
                 showMessage(context, error.toString(), error: true);
@@ -505,6 +636,8 @@ class VerifyEmailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => AuthFrame(
     title: 'Check your inbox',
     subtitle: 'A verification link was sent to $email.',
+    eyebrow: 'Almost there',
+    footNote: 'Made with care in the Philippines',
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -531,6 +664,9 @@ class VerifyEmailScreen extends ConsumerWidget {
                   .resendVerification(email);
               if (context.mounted)
                 showMessage(context, 'Verification email sent again.');
+            } on AuthException catch (error) {
+              if (context.mounted)
+                showMessage(context, error.message, error: true);
             } catch (error) {
               if (context.mounted)
                 showMessage(context, error.toString(), error: true);

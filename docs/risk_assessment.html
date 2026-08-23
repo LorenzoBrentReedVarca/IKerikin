@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IKeriKin — Risk Assessment and Contingency Plan</title>
+<style>
+@page { size: A4 landscape; margin: 16mm; }
+* { box-sizing: border-box; }
+body { margin: 0; color: #24202b; font: 10.5pt/1.55 "Segoe UI", sans-serif; }
+h1, h2, h3 { color: #5731b5; margin: 0 0 8px; }
+h1 { font-size: 24pt; }
+h2 { margin-top: 20px; font-size: 15pt; border-bottom: 2px solid #e5dcfa; padding-bottom: 5px; }
+p, ul, ol { margin: 6px 0 12px; }
+a { color: #5731b5; }
+.cover { min-height: 40mm; display: flex; flex-direction: column; justify-content: center; }
+.tagline { color: #d93676; font-size: 13pt; font-style: italic; margin: 0 0 6px; }
+.meta { margin-top: 10px; padding: 12px 18px; background: #f5f0ff; border-left: 5px solid #6d42d8; }
+
+table { width: 100%; border-collapse: collapse; margin: 10px 0 18px; font-size: 9.8pt; }
+th, td { border: 1px solid #ddd; padding: 7px 9px; text-align: left; vertical-align: top; }
+th { background: #5731b5; color: #fff; font-weight: 600; }
+tr:nth-child(even) td { background: #f8f6fd; }
+td.center, th.center { text-align: center; }
+.risk-high { color: #b3261e; font-weight: 700; }
+.risk-medium { color: #a15c00; font-weight: 700; }
+.risk-low { color: #24834b; font-weight: 700; }
+
+.legend { display: flex; gap: 18px; margin: 6px 0 14px; font-size: 9.5pt; }
+.legend span.dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:-1px; }
+
+footer { position: fixed; bottom: 3mm; right: 0; color: #777; font-size: 8pt; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <h1>IKeriKin</h1>
+  <p class="tagline">I Care for Your Kin — Risk Assessment and Contingency Plan</p>
+  <div class="meta">
+    <p><strong>Team activity:</strong> Project Timeline, Milestones, and Risk Assessment (Week 2 Progress Presentation)</p>
+    <p><strong>Project duration:</strong> 11 weeks — Mon, Jul 13, 2026 to Sun, Sep 27, 2026</p>
+    <p><strong>Repository:</strong> <a href="https://github.com/LorenzoBrentReedVarca/IKeriKin">github.com/LorenzoBrentReedVarca/IKeriKin</a></p>
+  </div>
+</section>
+
+<section>
+<h2>Risk Assessment and Contingency Plan</h2>
+<p>Risks identified for the IKeriKin project, their potential impact on the timeline or product, and the contingency plan the team will follow if each risk occurs.</p>
+
+<div class="legend">
+  <span><span class="dot" style="background:#b3261e;"></span>High impact</span>
+  <span><span class="dot" style="background:#a15c00;"></span>Medium impact</span>
+  <span><span class="dot" style="background:#24834b;"></span>Low impact</span>
+</div>
+
+<table>
+<tr><th style="width:26%">Risk</th><th class="center" style="width:9%">Impact</th><th>Contingency Plan</th></tr>
+<tr><td>Team member unavailable (illness, exams, personal issues)</td><td class="center risk-medium">Medium</td><td>Reassign tasks to other members; keep architecture and progress documented so any member can pick up a layer (presentation/domain/data/application)</td></tr>
+<tr><td>Delay in AI/Supabase Edge Function integration</td><td class="center risk-high">High</td><td>Build a local/mock lesson generator fallback first; adjust the schedule and prioritize core offline features over AI polish</td></tr>
+<tr><td>Internet connectivity issues (Supabase requires network access)</td><td class="center risk-medium">Medium</td><td>Rely on the existing offline preview mode (SharedPreferences); prepare offline demo copies and a backup mobile hotspot for presentations</td></tr>
+<tr><td>Hardware failure or device loss</td><td class="center risk-high">High</td><td>Commit and push code to GitHub frequently; store data in Supabase (cloud); keep a secondary test device/emulator available</td></tr>
+<tr><td>Scope changes / feature creep</td><td class="center risk-high">High</td><td>Lock the core feature list after the design phase; require adviser approval before adding new features; maintain a change-request log</td></tr>
+<tr><td>Sensitive child data privacy (disability, health &amp; learning information)</td><td class="center risk-high">High</td><td>Store only necessary data, use Supabase Auth and row-level security, follow the Data Privacy Act, and avoid collecting identifiable data beyond what is needed</td></tr>
+<tr><td>Cross-platform UI inconsistencies (Android/iOS/Web/Desktop)</td><td class="center risk-medium">Medium</td><td>Use the shared ResponsiveGrid/ResponsiveBody widgets, test on multiple screen sizes each sprint, and run <code>flutter analyze</code>/<code>flutter test</code> before every merge</td></tr>
+<tr><td>AI-generated content inaccurate or inappropriate for a child's needs</td><td class="center risk-high">High</td><td>Add a content-review step and prompt guardrails tailored to each disability/learning profile; fall back to curated templates if AI output fails validation</td></tr>
+</table>
+</section>
+
+<footer>IKeriKin · Risk Assessment and Contingency Plan</footer>
+</body>
+</html>

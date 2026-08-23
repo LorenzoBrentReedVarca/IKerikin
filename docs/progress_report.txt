@@ -1,0 +1,80 @@
+IKeriKin — Progress Report
+Deadline: July 27, 2026
+
+PROJECT PROGRESS CHECKLIST
+✔ Revised project proposal
+✔ Flutter project successfully created
+✔ Organized project structure
+✔ Basic UI completed
+✔ Working navigation
+✔ GitHub repository created with initial commit
+✔ PDF documentation with required screenshots
+✔ GitHub repository link included
+
+GitHub Repository: https://github.com/LorenzoBrentReedVarca/IKeriKin
+
+SDG Alignment (for the Revised Project Proposal section):
+IKeriKin supports SDG 4 (Quality Education) by giving Filipino children with special
+educational needs — ASD, ADHD, dyslexia, Down syndrome, speech delay, and
+developmental delay — access to personalized, accessible learning content that
+mainstream materials don't provide. It also touches SDG 10 (Reduced Inequalities)
+by lowering the barrier for families who lack access to specialized SPED resources.
+
+Summary of work completed:
+- Rebuilt the app's Material 3 theme (colors, buttons, cards, dialogs, nav bar) for a
+  consistent, accessible look across light and dark mode.
+- Added a responsive navigation shell: bottom nav bar on phones, a side navigation
+  rail on tablets/desktop/web.
+- Polished the Home, Learn, AI Lesson Generator, AI Lesson, Progress, Settings,
+  Admin, Child Profile, and Auth screens with clearer layouts, icons, and empty/
+  loading/error states.
+- Verified the app compiles and runs cleanly: `flutter analyze` reports no issues
+  and `flutter test` passes.
+- Committed and pushed all work to GitHub.
+
+------------------------------------------------------------
+
+SCREENSHOTS TO TAKE (required by the Week 2 assignment)
+
+1. Flutter project running successfully
+   The app open and loaded with no errors (web browser, emulator, or device).
+
+2. Development environment
+   Android Emulator window (or physical device) with the app installed/running.
+
+3. Project folder structure
+   VS Code Explorer sidebar expanded, showing the lib/ folders (screens/
+   presentation, widgets, models/domain, services/data, core, etc.).
+
+4. Initial application screens
+   One or two app screens, e.g. the Home screen and one other screen
+   (Learn or Child Profile).
+
+5. Working navigation between screens
+   Two screenshots showing different screens with the nav bar/rail visible,
+   proving you can move between them (e.g. Home + Learn).
+
+6. GitHub repository showing your initial commit
+   Your GitHub repo page (commit history or repo home) with at least one
+   commit and the repo URL visible in the address bar.
+
+------------------------------------------------------------
+
+REFLECTION (100-150 words)
+
+This week I revised the IKeriKin proposal and set up the Flutter project with a
+clean, organized structure (presentation, domain, data, application, and core
+folders). I implemented the five core screens — Home, Learn, AI Lesson Generator,
+AI Lesson, and Progress — connected with working navigation using GoRouter, and
+polished the UI with a consistent Material 3 theme, responsive layouts, and
+accessibility support (large text, high contrast, reduced motion). I also created
+a GitHub repository and pushed my initial commit.
+
+The main challenge was making layouts respond correctly across very different
+screen sizes, from phones to desktop web, without breaking existing screens. I
+resolved this by building a shared ResponsiveGrid/ResponsiveBody widget and a
+navigation shell that switches between a bottom bar and a side rail based on
+screen width, then verified everything with `flutter analyze` and `flutter test`
+before committing.
+
+GitHub Repository: https://github.com/LorenzoBrentReedVarca/IKeriKin

@@ -345,7 +345,7 @@ class ResponsiveBody extends StatelessWidget {
   const ResponsiveBody({
     super.key,
     required this.child,
-    this.maxWidth = 1100,
+    this.maxWidth = 1400,
     this.padding,
   });
   final Widget child;
@@ -426,22 +426,47 @@ class ResponsiveGrid extends StatelessWidget {
   );
 }
 
-/// Child photo with a consistent fallback used throughout parent dashboards.
+/// Resolves a child's `gender` string to the matching illustrated avatar
+/// asset, when one exists.
+String? genderAvatarAsset(String? gender) {
+  switch (gender?.trim().toLowerCase()) {
+    case 'male':
+    case 'boy':
+      return 'assets/branding/boy_icon.jpg';
+    case 'female':
+    case 'girl':
+      return 'assets/branding/girl_icon.jpg';
+    default:
+      return null;
+  }
+}
+
+/// Child photo with a consistent fallback used throughout parent dashboards:
+/// the child's own photo when set, otherwise the illustrated boy/girl mark
+/// matching their profile's gender, otherwise their name's initial.
 class ChildAvatar extends StatelessWidget {
   const ChildAvatar({
     super.key,
     required this.name,
     this.photoUrl,
+    this.gender,
     this.radius = 28,
   });
 
   final String name;
   final String? photoUrl;
+  final String? gender;
   final double radius;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final genderAsset = photoUrl == null ? genderAvatarAsset(gender) : null;
+    final ImageProvider? backgroundImage = photoUrl != null
+        ? NetworkImage(photoUrl!)
+        : genderAsset != null
+        ? AssetImage(genderAsset)
+        : null;
     return Semantics(
       label: 'Photo of $name',
       image: true,
@@ -449,8 +474,8 @@ class ChildAvatar extends StatelessWidget {
         radius: radius,
         backgroundColor: scheme.primaryContainer,
         foregroundColor: scheme.onPrimaryContainer,
-        backgroundImage: photoUrl == null ? null : NetworkImage(photoUrl!),
-        child: photoUrl == null
+        backgroundImage: backgroundImage,
+        child: backgroundImage == null
             ? (name.trim().isEmpty
                   ? Icon(Icons.child_care_rounded, size: radius)
                   : Text(
@@ -671,7 +696,13 @@ class EmptyState extends StatelessWidget {
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-              if (action != null) ...[const SizedBox(height: 22), action!],
+              if (action != null) ...[
+                const SizedBox(height: 22),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 360),
+                  child: action!,
+                ),
+              ],
             ],
           ),
         ),
@@ -794,7 +825,12 @@ Duration staggerDelay(int index, {int max = 8}) =>
 /// its own [GestureDetector] when no [onTap] is supplied it simply skips
 /// the callback while keeping the animation on child gestures beneath it.
 class BouncyTap extends StatefulWidget {
-  const BouncyTap({super.key, required this.child, this.onTap, this.scale = .92});
+  const BouncyTap({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.scale = .92,
+  });
   final Widget child;
   final VoidCallback? onTap;
   final double scale;
@@ -943,72 +979,72 @@ class MetricCard extends StatelessWidget {
       excludeSemantics: true,
       child: HoverLift(
         child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppTheme.radius),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              accent.withValues(alpha: .22),
-              accent.withValues(alpha: .04),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppTheme.radius),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                accent.withValues(alpha: .22),
+                accent.withValues(alpha: .04),
+              ],
+            ),
+            border: Border.all(color: accent.withValues(alpha: .22)),
+            boxShadow: [
+              BoxShadow(
+                color: accent.withValues(alpha: .10),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+                spreadRadius: -8,
+              ),
             ],
           ),
-          border: Border.all(color: accent.withValues(alpha: .22)),
-          boxShadow: [
-            BoxShadow(
-              color: accent.withValues(alpha: .10),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
-              spreadRadius: -8,
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: .14),
-                borderRadius: BorderRadius.circular(AppTheme.radius),
-                border: Border.all(color: accent.withValues(alpha: .20)),
-              ),
-              child: Icon(icon, size: 22, color: accent),
-            ),
-            const Spacer(),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                transitionBuilder: (child, animation) => FadeTransition(
-                  opacity: animation,
-                  child: ScaleTransition(scale: animation, child: child),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: .14),
+                  borderRadius: BorderRadius.circular(AppTheme.radius),
+                  border: Border.all(color: accent.withValues(alpha: .20)),
                 ),
-                child: Text(
-                  value,
-                  key: ValueKey(value),
-                  maxLines: 1,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    color: accent,
+                child: Icon(icon, size: 22, color: accent),
+              ),
+              const Spacer(),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: ScaleTransition(scale: animation, child: child),
+                  ),
+                  child: Text(
+                    value,
+                    key: ValueKey(value),
+                    maxLines: 1,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: accent,
+                    ),
                   ),
                 ),
               ),
-            ),
-            Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
+              Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
       ),
     );

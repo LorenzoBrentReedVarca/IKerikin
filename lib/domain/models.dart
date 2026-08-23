@@ -161,6 +161,7 @@ class Flashcard {
   });
   final String front;
   final String back;
+
   /// Optional visual description a parent/illustrator can use as a fallback image prompt.
   final String imageDescription;
   factory Flashcard.fromJson(Map<String, dynamic> json) => Flashcard(
@@ -246,6 +247,7 @@ class VideoScene {
   final int sceneNumber;
   final int durationSeconds;
   final String narration;
+
   /// Prompt sent to the video generation provider (e.g. Runway).
   final String visualPrompt;
   final String educationalObjective;
@@ -293,8 +295,10 @@ class LessonContent {
   final List<ActivityPair> matchingActivity;
   final String dailyActivity;
   final List<String> parentTips;
+
   /// Learning objectives the lesson targets.
   final List<String> objectives;
+
   /// Structured animated video script generated alongside the lesson.
   final List<VideoScene> videoScript;
 
@@ -350,36 +354,6 @@ class LessonContent {
   };
 }
 
-/// Current state of an asynchronous AI 3D model render.
-@immutable
-class VideoGeneration {
-  const VideoGeneration({
-    required this.id,
-    required this.status,
-    required this.progress,
-    this.error,
-    this.modelUrl,
-  });
-
-  final String id;
-  final String status;
-  final int progress;
-  final String? error;
-  final String? modelUrl;
-
-  bool get isComplete => status == 'completed';
-  bool get isFailed => status == 'failed';
-
-  factory VideoGeneration.fromJson(Map<String, dynamic> json) =>
-      VideoGeneration(
-        id: json['id'] as String? ?? '',
-        status: json['status'] as String? ?? 'queued',
-        progress: (json['progress'] as num?)?.round() ?? 0,
-        error: (json['error'] as Map?)?['message'] as String?,
-        modelUrl: json['model_url'] as String?,
-      );
-}
-
 /// Input parameters used to request a personalized lesson.
 @immutable
 class LessonRequest {
@@ -404,8 +378,10 @@ class LessonRequest {
   final int durationMinutes;
   final String additionalNotes;
   final DateTime createdAt;
+
   /// Requested animated video length: 60 (Quick Lesson), 180 (Learning Adventure), or 300 (Full Story) seconds.
   final int videoDurationSeconds;
+
   /// Story, Educational Adventure, Cartoon Lesson, or Interactive Lesson.
   final String contentType;
 
@@ -418,7 +394,7 @@ class LessonRequest {
       orElse: () => LessonDifficulty.easy,
     ),
     language: json['language'] as String? ?? 'English',
-    durationMinutes: json['duration_minutes'] as int? ?? 15,
+    durationMinutes: json['duration_minutes'] as int? ?? 3,
     additionalNotes: json['additional_notes'] as String? ?? '',
     createdAt: DateTime.parse(json['created_at'] as String),
     videoDurationSeconds: json['video_duration_seconds'] as int? ?? 60,
@@ -604,10 +580,7 @@ class WordDefinition {
         .toList();
     final audio = phonetics
         .map((entry) => entry['audio'] as String?)
-        .firstWhere(
-          (url) => url != null && url.isNotEmpty,
-          orElse: () => null,
-        );
+        .firstWhere((url) => url != null && url.isNotEmpty, orElse: () => null);
     return WordDefinition(
       word: json['word'] as String? ?? '',
       phonetic:
@@ -616,7 +589,8 @@ class WordDefinition {
       audioUrl: audio,
       meanings: (json['meanings'] as List? ?? const [])
           .map(
-            (item) => WordMeaning.fromJson(Map<String, dynamic>.from(item as Map)),
+            (item) =>
+                WordMeaning.fromJson(Map<String, dynamic>.from(item as Map)),
           )
           .toList(),
     );
@@ -715,6 +689,7 @@ class VideoGenerationResult {
 
   final int sceneNumber;
   final VideoGenerationStatus status;
+
   /// External provider (e.g. Runway) task/job identifier used for polling.
   final String? providerJobId;
   final String? videoUrl;
@@ -769,7 +744,9 @@ class GeneratedVideoScene {
         childId: json['child_id'] as String,
         sceneNumber: json['scene_number'] as int? ?? 1,
         provider: json['provider'] as String? ?? 'runway',
-        status: parseVideoGenerationStatus(json['generation_status'] as String?),
+        status: parseVideoGenerationStatus(
+          json['generation_status'] as String?,
+        ),
         providerJobId: json['generation_job_id'] as String?,
         videoUrl: json['video_url'] as String?,
         errorMessage: json['error_message'] as String?,
@@ -799,6 +776,7 @@ class VideoGenerationJob {
   final String childId;
   final String provider;
   final VideoGenerationStatus status;
+
   /// Final combined lesson video URL, set once every scene completes.
   final String? videoUrl;
   final String? errorMessage;
@@ -825,4 +803,3 @@ class VideoGenerationJob {
     scenes: scenes,
   );
 }
-

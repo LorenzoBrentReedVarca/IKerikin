@@ -2,12 +2,25 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Centralized build-time configuration for IKeriKin.
+///
+/// Supabase is IKeriKin's only backend: every auth, data, and AI call goes
+/// through the live project below. The anon key is safe to ship in client
+/// builds by design (Postgres RLS is the real access boundary) — it can
+/// still be overridden with `--dart-define` for a different environment,
+/// but there is no offline/local fallback mode anymore.
 abstract final class AppConfig {
-  /// Supabase project URL supplied with `--dart-define=SUPABASE_URL=...`.
-  static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  /// Supabase project URL. Override with `--dart-define=SUPABASE_URL=...`.
+  static const supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: 'https://pnienrjbdopfkedfeuhn.supabase.co',
+  );
 
-  /// Supabase anonymous key supplied with `--dart-define=SUPABASE_ANON_KEY=...`.
-  static const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+  /// Supabase anonymous key. Override with `--dart-define=SUPABASE_ANON_KEY=...`.
+  static const supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuaWVucmpiZG9wZmtlZGZldWhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5OTE0ODcsImV4cCI6MjEwMDU2NzQ4N30.LRJga1y-mBut9QtVmUhIR4RZv5ikB8tqN7x5m3Nf2_4',
+  );
 
   static const _redirectUrlDefine = String.fromEnvironment(
     'AUTH_REDIRECT_URL',
@@ -28,27 +41,14 @@ abstract final class AppConfig {
     defaultValue: 'generate-lesson',
   );
 
-  /// Edge Function that creates and proxies asynchronous AI video renders.
-  static const videoFunctionName = String.fromEnvironment(
-    'VIDEO_FUNCTION_NAME',
-    defaultValue: 'generate-video',
-  );
-
-  /// Whether cloud services are configured for this build.
-  static bool get hasSupabase =>
-      supabaseUrl.startsWith('https://') && supabaseAnonKey.isNotEmpty;
-
-  /// Initializes Supabase when credentials are available.
+  /// Initializes the Supabase client. Called once at app startup.
   static Future<void> initialize() async {
-    if (hasSupabase) {
-      await Supabase.initialize(
-        url: supabaseUrl,
-        publishableKey: supabaseAnonKey,
-      );
-    }
+    await Supabase.initialize(
+      url: supabaseUrl,
+      publishableKey: supabaseAnonKey,
+    );
   }
 
-  /// Returns the configured client or `null` in local preview mode.
-  static SupabaseClient? get supabase =>
-      hasSupabase ? Supabase.instance.client : null;
+  /// The live Supabase client used for every auth, data, and AI call.
+  static SupabaseClient get supabase => Supabase.instance.client;
 }

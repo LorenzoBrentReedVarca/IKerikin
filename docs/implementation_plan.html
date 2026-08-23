@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IKeriKin Implementation Plan</title>
+<style>
+@page { size: A4 landscape; margin: 14mm; }
+* { box-sizing: border-box; }
+body { margin: 0; color: #24202b; font: 10.5pt/1.5 "Segoe UI", sans-serif; }
+h1, h2, h3 { color: #5731b5; margin: 0 0 8px; }
+h1 { font-size: 26pt; }
+h2 { margin-top: 20px; font-size: 15pt; border-bottom: 2px solid #e5dcfa; padding-bottom: 5px; }
+h3 { font-size: 12pt; margin-top: 14px; }
+p, ul, ol { margin: 6px 0 12px; }
+a { color: #5731b5; }
+.cover { min-height: 60mm; display: flex; flex-direction: column; justify-content: center; }
+.tagline { color: #d93676; font-size: 14pt; font-style: italic; margin: 0 0 6px; }
+.meta { margin-top: 10px; padding: 12px 18px; background: #f5f0ff; border-left: 5px solid #6d42d8; }
+.page-break { break-before: page; }
+
+table { width: 100%; border-collapse: collapse; margin: 10px 0 18px; font-size: 9.5pt; }
+th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; vertical-align: top; }
+th { background: #5731b5; color: #fff; font-weight: 600; }
+tr:nth-child(even) td { background: #f8f6fd; }
+td.center, th.center { text-align: center; }
+
+.phase-row td.phase-name { font-weight: 700; background: #ece4fb; }
+
+/* Gantt chart */
+.gantt-wrap { overflow-x: auto; margin: 14px 0 22px; }
+.gantt { display: grid; grid-template-columns: 230px repeat(11, 1fr); grid-auto-rows: 30px; min-width: 950px; border: 1px solid #ddd; }
+.gantt .head { background: #5731b5; color: #fff; font-size: 8.3pt; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px; border-right: 1px solid #7451d6; }
+.gantt .head.label { text-align: left; justify-content: center; padding-left: 8px; }
+.gantt .row-label { font-size: 9pt; font-weight: 600; display: flex; align-items: center; padding-left: 8px; background: #f5f0ff; border-top: 1px solid #eee; border-right: 1px solid #eee; }
+.gantt .cell { border-top: 1px solid #eee; border-right: 1px solid #eee; }
+.gantt .bar { margin: 5px 3px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 8pt; font-weight: 600; white-space: nowrap; overflow: hidden; }
+.p1 { background: #6d42d8; } .p2 { background: #8a5cf5; } .p3 { background: #d93676; }
+.p4 { background: #ef7fa8; } .p5 { background: #f2994a; } .p6 { background: #2ba36b; }
+.p7 { background: #2b8fa3; }
+
+.milestone-badge { display:inline-block; padding: 1px 8px; border-radius: 10px; background:#ece4fb; color:#5731b5; font-weight:700; font-size: 9pt; }
+.risk-high { color: #b3261e; font-weight: 700; }
+.risk-medium { color: #a15c00; font-weight: 700; }
+.risk-low { color: #24834b; font-weight: 700; }
+
+footer { position: fixed; bottom: 2mm; right: 0; color: #777; font-size: 8pt; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <h1>IKeriKin</h1>
+  <p class="tagline">I Care for Your Kin — Project Implementation Plan</p>
+  <div class="meta">
+    <p><strong>Team activity:</strong> Project Timeline, Milestones, and Risk Assessment (Week 2 Progress Presentation)</p>
+    <p><strong>Project duration:</strong> 11 weeks — Mon, Jul 13, 2026 to Sun, Sep 27, 2026</p>
+    <p><strong>Repository:</strong> <a href="https://github.com/LorenzoBrentReedVarca/IKeriKin">github.com/LorenzoBrentReedVarca/IKeriKin</a></p>
+  </div>
+</section>
+
+<section class="page-break">
+<h2>1. Project Timeline / Gantt Chart</h2>
+<p>The project is organized into 7 phases across 11 weeks, from initiation to final presentation. Detailed tasks and subtasks, with start/end dates and durations, are listed below the chart.</p>
+
+<div class="gantt-wrap">
+<div class="gantt">
+  <div class="head label">Phase</div>
+  <div class="head">Wk1<br>Jul13</div>
+  <div class="head">Wk2<br>Jul20</div>
+  <div class="head">Wk3<br>Jul27</div>
+  <div class="head">Wk4<br>Aug3</div>
+  <div class="head">Wk5<br>Aug10</div>
+  <div class="head">Wk6<br>Aug17</div>
+  <div class="head">Wk7<br>Aug24</div>
+  <div class="head">Wk8<br>Aug31</div>
+  <div class="head">Wk9<br>Sep7</div>
+  <div class="head">Wk10<br>Sep14</div>
+  <div class="head">Wk11<br>Sep21</div>
+
+  <div class="row-label">1. Initiation &amp; Planning</div>
+  <div class="cell" style="grid-column: 2 / 4;"><div class="bar p1" style="grid-column: 2 / 4;">Initiation &amp; Planning</div></div>
+  <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+
+  <div class="row-label">2. System Design</div>
+  <div class="cell"></div><div class="cell"></div>
+  <div class="cell" style="grid-column: 4 / 6;"><div class="bar p2" style="grid-column: 4 / 6;">System Design</div></div>
+  <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+
+  <div class="row-label">3. Core Development / Prototype</div>
+  <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+  <div class="cell" style="grid-column: 6 / 8;"><div class="bar p3" style="grid-column: 6 / 8;">Core Dev / Prototype</div></div>
+  <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+
+  <div class="row-label">4. Feature Completion &amp; AI Integration</div>
+  <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+  <div class="cell" style="grid-column: 8 / 10;"><div class="bar p4" style="grid-column: 8 / 10;">AI Integration</div></div>
+  <div class="cell"></div><div class="cell"></div>
+
+  <div class="row-label">5. System Testing &amp; QA</div>
+  <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+  <div class="cell" style="grid-column: 10 / 11;"><div class="bar p5" style="grid-column: 10 / 11;">Testing</div></div>
+  <div class="cell"></div><div class="cell"></div>
+
+  <div class="row-label">6. Deployment &amp; Documentation</div>
+  <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+  <div class="cell" style="grid-column: 11 / 12;"><div class="bar p6" style="grid-column: 11 / 12;">Deployment</div></div>
+  <div class="cell"></div>
+
+  <div class="row-label">7. Final Presentation</div>
+  <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+  <div class="cell" style="grid-column: 12 / 13;"><div class="bar p7" style="grid-column: 12 / 13;">Presentation</div></div>
+</div>
+</div>
+
+<h3>Detailed Task Breakdown</h3>
+<table>
+<tr><th>Phase</th><th>Task / Subtask</th><th class="center">Start Date</th><th class="center">End Date</th><th class="center">Duration</th></tr>
+
+<tr class="phase-row"><td class="phase-name" rowspan="6">1. Initiation &amp; Planning</td><td>Requirements gathering &amp; problem definition</td><td class="center">Jul 13</td><td class="center">Jul 15</td><td class="center">3 days</td></tr>
+<tr><td>Target-user &amp; SPED needs research</td><td class="center">Jul 13</td><td class="center">Jul 16</td><td class="center">4 days</td></tr>
+<tr><td>Revise and finalize project proposal</td><td class="center">Jul 16</td><td class="center">Jul 19</td><td class="center">4 days</td></tr>
+<tr><td>Set up Flutter project &amp; layered architecture (presentation/domain/data/application/core)</td><td class="center">Jul 14</td><td class="center">Jul 17</td><td class="center">4 days</td></tr>
+<tr><td>Define system architecture &amp; tech stack (Riverpod, GoRouter, Supabase)</td><td class="center">Jul 17</td><td class="center">Jul 19</td><td class="center">3 days</td></tr>
+<tr><td>Progress report, screenshots &amp; Week 2 submission</td><td class="center">Jul 20</td><td class="center">Jul 26</td><td class="center">7 days</td></tr>
+
+<tr class="phase-row"><td class="phase-name" rowspan="6">2. System Design</td><td>UI/UX wireframes for the 5 core screens</td><td class="center">Jul 27</td><td class="center">Jul 31</td><td class="center">5 days</td></tr>
+<tr><td>Design system: Material 3 theme + accessibility spec</td><td class="center">Jul 29</td><td class="center">Aug 2</td><td class="center">5 days</td></tr>
+<tr><td>Database schema design (users, children, lessons, progress)</td><td class="center">Jul 30</td><td class="center">Aug 3</td><td class="center">5 days</td></tr>
+<tr><td>API / Edge Function design for AI lesson generation</td><td class="center">Aug 3</td><td class="center">Aug 6</td><td class="center">4 days</td></tr>
+<tr><td>Navigation architecture (GoRouter + responsive nav shell)</td><td class="center">Aug 3</td><td class="center">Aug 6</td><td class="center">4 days</td></tr>
+<tr><td>Design review &amp; documentation sign-off</td><td class="center">Aug 7</td><td class="center">Aug 9</td><td class="center">3 days</td></tr>
+
+<tr class="phase-row"><td class="phase-name" rowspan="6">3. Core Development / Prototype</td><td>Implement auth (registration, login, recovery, offline preview)</td><td class="center">Aug 10</td><td class="center">Aug 14</td><td class="center">5 days</td></tr>
+<tr><td>Implement child profile CRUD &amp; learner-context fields</td><td class="center">Aug 10</td><td class="center">Aug 15</td><td class="center">6 days</td></tr>
+<tr><td>Build Home screen + responsive navigation shell</td><td class="center">Aug 13</td><td class="center">Aug 17</td><td class="center">5 days</td></tr>
+<tr><td>Integrate Riverpod state management across screens</td><td class="center">Aug 14</td><td class="center">Aug 19</td><td class="center">6 days</td></tr>
+<tr><td>Build AI Lesson Generator screen (form &amp; inputs)</td><td class="center">Aug 18</td><td class="center">Aug 21</td><td class="center">4 days</td></tr>
+<tr><td>Internal prototype demo &amp; review</td><td class="center">Aug 22</td><td class="center">Aug 23</td><td class="center">2 days</td></tr>
+
+<tr class="phase-row"><td class="phase-name" rowspan="7">4. Feature Completion &amp; AI Integration</td><td>Integrate Supabase Edge Function for AI lesson generation</td><td class="center">Aug 24</td><td class="center">Aug 28</td><td class="center">5 days</td></tr>
+<tr><td>Build stories, flashcards &amp; quizzes</td><td class="center">Aug 24</td><td class="center">Aug 29</td><td class="center">6 days</td></tr>
+<tr><td>Build memory &amp; matching games</td><td class="center">Aug 27</td><td class="center">Aug 31</td><td class="center">5 days</td></tr>
+<tr><td>Implement text-to-speech for stories</td><td class="center">Aug 31</td><td class="center">Sep 2</td><td class="center">3 days</td></tr>
+<tr><td>Implement Progress Dashboard (weekly/monthly/all-time)</td><td class="center">Sep 1</td><td class="center">Sep 4</td><td class="center">4 days</td></tr>
+<tr><td>Implement XP, coins, streaks &amp; badges</td><td class="center">Sep 2</td><td class="center">Sep 5</td><td class="center">4 days</td></tr>
+<tr><td>Implement accessibility settings (text size, contrast, reduced motion)</td><td class="center">Sep 4</td><td class="center">Sep 6</td><td class="center">3 days</td></tr>
+
+<tr class="phase-row"><td class="phase-name" rowspan="5">5. System Testing &amp; QA</td><td>Unit tests (domain &amp; data layers)</td><td class="center">Sep 7</td><td class="center">Sep 8</td><td class="center">2 days</td></tr>
+<tr><td>Widget tests for the 5 core screens</td><td class="center">Sep 8</td><td class="center">Sep 10</td><td class="center">3 days</td></tr>
+<tr><td>Integration testing (auth + Supabase + Edge Functions)</td><td class="center">Sep 9</td><td class="center">Sep 11</td><td class="center">3 days</td></tr>
+<tr><td>Accessibility &amp; usability testing</td><td class="center">Sep 10</td><td class="center">Sep 12</td><td class="center">3 days</td></tr>
+<tr><td>Bug fixing &amp; performance tuning</td><td class="center">Sep 11</td><td class="center">Sep 13</td><td class="center">3 days</td></tr>
+
+<tr class="phase-row"><td class="phase-name" rowspan="4">6. Deployment &amp; Documentation</td><td>Final bug fixes &amp; code cleanup</td><td class="center">Sep 14</td><td class="center">Sep 15</td><td class="center">2 days</td></tr>
+<tr><td>Build &amp; verify Android/iOS/Web/Desktop releases</td><td class="center">Sep 15</td><td class="center">Sep 17</td><td class="center">3 days</td></tr>
+<tr><td>Finalize documentation (README, proposal PDF, screenshots)</td><td class="center">Sep 16</td><td class="center">Sep 18</td><td class="center">3 days</td></tr>
+<tr><td>Deploy web build / prepare release artifacts</td><td class="center">Sep 18</td><td class="center">Sep 20</td><td class="center">3 days</td></tr>
+
+<tr class="phase-row"><td class="phase-name" rowspan="3">7. Final Presentation</td><td>Prepare final presentation slide deck</td><td class="center">Sep 21</td><td class="center">Sep 23</td><td class="center">3 days</td></tr>
+<tr><td>Prepare live demo script &amp; rehearse</td><td class="center">Sep 23</td><td class="center">Sep 25</td><td class="center">3 days</td></tr>
+<tr><td>Final presentation &amp; documentation submission</td><td class="center">Sep 26</td><td class="center">Sep 27</td><td class="center">2 days</td></tr>
+</table>
+</section>
+
+<section class="page-break">
+<h2>2. Milestones and Deliverables</h2>
+<table>
+<tr><th>Milestone</th><th>Expected Output</th><th class="center">Target Date</th></tr>
+<tr><td>Project Proposal Approved</td><td>Approved Proposal</td><td class="center">Week 2</td></tr>
+<tr><td>System Design Completed</td><td>Design Documents</td><td class="center">Week 4</td></tr>
+<tr><td>Prototype Finished</td><td>Functional Prototype</td><td class="center">Week 6</td></tr>
+<tr><td>System Testing</td><td>Test Report</td><td class="center">Week 8</td></tr>
+<tr><td>Final System Completed</td><td>Completed System</td><td class="center">Week 10</td></tr>
+<tr><td>Final Presentation</td><td>Presentation &amp; Documentation</td><td class="center">Week 11</td></tr>
+</table>
+</section>
+
+<section class="page-break">
+<h2>3. Risk Assessment and Contingency Plan</h2>
+<table>
+<tr><th>Risk</th><th class="center">Impact</th><th>Contingency Plan</th></tr>
+<tr><td>Team member unavailable (illness, exams, personal issues)</td><td class="center risk-medium">Medium</td><td>Reassign tasks to other members; keep architecture and progress documented so any member can pick up a layer (presentation/domain/data/application)</td></tr>
+<tr><td>Delay in AI/Supabase Edge Function integration</td><td class="center risk-high">High</td><td>Build a local/mock lesson generator fallback first; adjust the schedule and prioritize core offline features over AI polish</td></tr>
+<tr><td>Internet connectivity issues (Supabase requires network access)</td><td class="center risk-medium">Medium</td><td>Rely on the existing offline preview mode (SharedPreferences); prepare offline demo copies and a backup mobile hotspot for presentations</td></tr>
+<tr><td>Hardware failure or device loss</td><td class="center risk-high">High</td><td>Commit and push code to GitHub frequently; store data in Supabase (cloud); keep a secondary test device/emulator available</td></tr>
+<tr><td>Scope changes / feature creep</td><td class="center risk-high">High</td><td>Lock the core feature list after the design phase; require adviser approval before adding new features; maintain a change-request log</td></tr>
+<tr><td>Sensitive child data privacy (disability, health &amp; learning information)</td><td class="center risk-high">High</td><td>Store only necessary data, use Supabase Auth and row-level security, follow the Data Privacy Act, and avoid collecting identifiable data beyond what is needed</td></tr>
+<tr><td>Cross-platform UI inconsistencies (Android/iOS/Web/Desktop)</td><td class="center risk-medium">Medium</td><td>Use the shared ResponsiveGrid/ResponsiveBody widgets, test on multiple screen sizes each sprint, and run <code>flutter analyze</code>/<code>flutter test</code> before every merge</td></tr>
+<tr><td>AI-generated content inaccurate or inappropriate for a child's needs</td><td class="center risk-high">High</td><td>Add a content-review step and prompt guardrails tailored to each disability/learning profile; fall back to curated templates if AI output fails validation</td></tr>
+</table>
+</section>
+
+<footer>IKeriKin · Project Implementation Plan</footer>
+</body>
+</html>

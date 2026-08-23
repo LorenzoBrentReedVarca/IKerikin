@@ -18,15 +18,12 @@ final sharedPreferencesProvider = Provider<SharedPreferences>(
       throw StateError('SharedPreferences must be initialized before runApp.'),
 );
 
-/// Provides the optional configured Supabase client.
+/// Provides the live Supabase client used throughout the app.
 final supabaseClientProvider = Provider((ref) => AppConfig.supabase);
 
 /// Provides authentication persistence.
 final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => SupabaseAuthRepository(
-    ref.watch(supabaseClientProvider),
-    ref.watch(sharedPreferencesProvider),
-  ),
+  (ref) => SupabaseAuthRepository(ref.watch(supabaseClientProvider)),
 );
 
 /// Emits the current session and subsequent authentication changes.
@@ -36,64 +33,45 @@ final authStateProvider = StreamProvider<AppUser?>(
 
 /// Provides child profile persistence.
 final childRepositoryProvider = Provider<ChildRepository>(
-  (ref) => SupabaseChildRepository(
+  (ref) => SupabaseChildRepository(ref.watch(supabaseClientProvider)),
+);
+
+/// Generates lesson text (story, flashcards, quiz, memory/matching games,
+/// parent tips) via the Gemini-backed `generate-lesson` Edge Function.
+final aiLessonProvider = Provider<AiLessonProvider>(
+  (ref) => SupabaseAiLessonProvider(ref.watch(supabaseClientProvider)),
+);
+
+/// Provides the swappable animated lesson-video generation service.
+final videoGenerationServiceProvider = Provider<VideoGenerationService>(
+  (ref) => SupabaseVideoGenerationService(ref.watch(supabaseClientProvider)),
+);
+
+/// Provides animated lesson video job persistence and orchestration.
+final videoJobRepositoryProvider = Provider<VideoJobRepository>(
+  (ref) => SupabaseVideoJobRepository(
     ref.watch(supabaseClientProvider),
-    ref.watch(sharedPreferencesProvider),
+    ref.watch(videoGenerationServiceProvider),
   ),
 );
 
-/// Selects the cloud AI provider when configured and an offline provider otherwise.
-final aiLessonProvider = Provider<AiLessonProvider>((ref) {
-  final client = ref.watch(supabaseClientProvider);
-  return client == null
-      ? const LocalEducationalProvider()
-      : SupabaseAiLessonProvider(client);
-});
-
-/// Provides cloud 3D model generation when Supabase is configured.
-final aiVideoProvider = Provider<AiVideoProvider?>((ref) {
-  final client = ref.watch(supabaseClientProvider);
-  return client == null ? null : SupabaseAiVideoProvider(client);
-});
-
-/// Provides the swappable animated lesson-video generation service.
-final videoGenerationServiceProvider = Provider<VideoGenerationService?>((ref) {
-  final client = ref.watch(supabaseClientProvider);
-  return client == null ? null : SupabaseVideoGenerationService(client);
-});
-
-/// Provides animated lesson video job persistence and orchestration.
-final videoJobRepositoryProvider = Provider<VideoJobRepository?>((ref) {
-  final service = ref.watch(videoGenerationServiceProvider);
-  if (service == null) return null;
-  return SupabaseVideoJobRepository(ref.watch(supabaseClientProvider), service);
-});
-
 /// Streams the animated video generation job (if any) for a lesson.
-final videoJobProvider = StreamProvider.family<VideoGenerationJob?, String>((
-  ref,
-  lessonId,
-) {
-  final repository = ref.watch(videoJobRepositoryProvider);
-  if (repository == null) return Stream.value(null);
-  return repository.watchJobForLesson(lessonId);
-});
+final videoJobProvider = StreamProvider.family<VideoGenerationJob?, String>(
+  (ref, lessonId) =>
+      ref.watch(videoJobRepositoryProvider).watchJobForLesson(lessonId),
+);
 
 /// Provides lesson generation and persistence.
 final lessonRepositoryProvider = Provider<LessonRepository>(
   (ref) => SupabaseLessonRepository(
     ref.watch(supabaseClientProvider),
-    ref.watch(sharedPreferencesProvider),
     ref.watch(aiLessonProvider),
   ),
 );
 
 /// Provides learning progress aggregation.
 final progressRepositoryProvider = Provider<ProgressRepository>(
-  (ref) => SupabaseProgressRepository(
-    ref.watch(supabaseClientProvider),
-    ref.watch(sharedPreferencesProvider),
-  ),
+  (ref) => SupabaseProgressRepository(ref.watch(supabaseClientProvider)),
 );
 
 /// Provides restricted administrative data access.
@@ -360,7 +338,6 @@ class VideoJobController extends Notifier<bool> {
 
   Future<VideoGenerationJob?> start(Lesson lesson, ChildProfile child) async {
     final repository = ref.read(videoJobRepositoryProvider);
-    if (repository == null) return null;
     state = true;
     try {
       final job = await repository.startGeneration(lesson, child);
@@ -373,7 +350,6 @@ class VideoJobController extends Notifier<bool> {
 
   Future<VideoGenerationJob?> retry(Lesson lesson, String jobId) async {
     final repository = ref.read(videoJobRepositoryProvider);
-    if (repository == null) return null;
     state = true;
     try {
       final job = await repository.retry(jobId, lesson.content.videoScript);
@@ -386,6 +362,6 @@ class VideoJobController extends Notifier<bool> {
 }
 
 /// Provides animated lesson video mutation state.
-final videoJobControllerProvider =
-    NotifierProvider<VideoJobController, bool>(VideoJobController.new);
-
+final videoJobControllerProvider = NotifierProvider<VideoJobController, bool>(
+  VideoJobController.new,
+);

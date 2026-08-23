@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../application/providers.dart';
@@ -71,8 +72,14 @@ class AppShell extends ConsumerWidget {
     ),
   ];
 
-  void _go(BuildContext context, int index) {
+  static final FlutterTts _tts = FlutterTts();
+
+  void _go(BuildContext context, WidgetRef ref, int index) {
     if (!prefersReducedMotion(context)) HapticFeedback.selectionClick();
+    if (index != navigationShell.currentIndex &&
+        ref.read(accessibilityProvider).voiceNavigation) {
+      _tts.speak(_destinations[index].label);
+    }
     navigationShell.goBranch(
       index,
       initialLocation: index == navigationShell.currentIndex,
@@ -89,7 +96,7 @@ class AppShell extends ConsumerWidget {
         currentIndex: navigationShell.currentIndex,
         destinations: _destinations,
         large: largeButtons,
-        onSelected: (index) => _go(context, index),
+        onSelected: (index) => _go(context, ref, index),
       ),
     );
   }
@@ -191,7 +198,8 @@ class _SignpostNavBarState extends State<_SignpostNavBar> {
                   widget.destinations.length;
               return Row(
                 children: [
-                  for (final (index, destination) in widget.destinations.indexed)
+                  for (final (index, destination)
+                      in widget.destinations.indexed)
                     _SignItem(
                       key: ValueKey(destination.label),
                       destination: destination,
@@ -293,12 +301,8 @@ class _SignItem extends StatelessWidget {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            destination.color.withValues(
-                              alpha: .4 + .5 * t,
-                            ),
-                            destination.color.withValues(
-                              alpha: .12 + .18 * t,
-                            ),
+                            destination.color.withValues(alpha: .4 + .5 * t),
+                            destination.color.withValues(alpha: .12 + .18 * t),
                           ],
                         ),
                         boxShadow: t <= 0.01

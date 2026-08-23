@@ -15,7 +15,9 @@ serve(async (request) => {
     const { request: lessonRequest, child } = await request.json();
 
     const videoDurationSeconds = Number(lessonRequest?.video_duration_seconds ?? 60);
-    const sceneCount = Math.max(3, Math.min(10, Math.round(videoDurationSeconds / 8)));
+    // Each scene is one separate Runway render call, so keep this small:
+    // 1 scene for the 1-minute "Quick Lesson", 2 for 3-minute, 3 for 5-minute.
+    const sceneCount = videoDurationSeconds <= 60 ? 1 : videoDurationSeconds <= 180 ? 2 : 3;
     const contentType = String(lessonRequest?.content_type ?? "Story");
 
     const prompt = `Create a safe, strengths-based special education lesson package for a Filipino child. Never diagnose or provide medical advice. Use age-appropriate, respectful, and encouraging language tailored to the child's learning needs (e.g. short sentences and simple vocabulary for Dyslexia; short sections and frequent interaction for ADHD; simple vocabulary and repetition for Speech Delay).

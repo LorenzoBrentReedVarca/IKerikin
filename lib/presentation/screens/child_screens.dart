@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../application/providers.dart';
+import '../../core/theme/app_theme.dart';
 import '../../domain/models.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/decorative_scenes.dart';
@@ -24,205 +25,207 @@ class ChildProfileScreen extends ConsumerWidget {
       body: SceneBackground(
         scene: SceneKind.profile,
         child: ResponsiveBody(
-          maxWidth: 900,
+          maxWidth: 1300,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
           child: childrenState.when(
-          loading: () => const LoadingView(message: 'Loading profile…'),
-          error: (error, _) => ErrorView(
-            message: error.toString(),
-            onRetry: () => ref.invalidate(childrenProvider(user.id)),
-          ),
-          data: (children) {
-            if (children.isEmpty) {
-              return EmptyState(
-                icon: Icons.child_care_rounded,
-                title: 'Create a child profile',
-                message:
-                    'Add the learner details used to personalize AI lessons.',
-                action: FilledButton.icon(
-                  onPressed: () => context.push('/children/new'),
-                  icon: const Icon(Icons.person_add_alt_1_rounded),
-                  label: const Text('Add child'),
-                ),
-              );
-            }
-            final selectedId = ref.watch(selectedChildProvider);
-            final child =
-                children.where((item) => item.id == selectedId).firstOrNull ??
-                children.first;
-            final progress = ref.watch(progressProvider(child.id)).value;
-            return ListView(
-              children: [
-                HeroBanner(
-                  icon: Icons.favorite_rounded,
-                  title: '${child.name}\'s profile',
-                  colorfulTitle: true,
-                  subtitle: 'Everything that shapes lessons made for ${child.name}.',
-                  actions: [
-                    MastheadAction(
-                      icon: Icons.settings_outlined,
-                      tooltip: 'Settings and accessibility',
-                      onPressed: () => context.push('/settings'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                _ProfileHero(child: child),
-                const SizedBox(height: 14),
-                Card(
-                  color: Theme.of(context).colorScheme.surfaceContainerLow,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.primaryContainer,
-                          foregroundColor: Theme.of(
-                            context,
-                          ).colorScheme.onPrimaryContainer,
-                          child: const Icon(Icons.track_changes_rounded),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Learning Goal',
-                                style: TextStyle(fontWeight: FontWeight.w900),
-                              ),
-                              Text(
-                                child.challenges.isEmpty
-                                    ? 'Building confidence through personalized daily practice.'
-                                    : 'Building confidence with ${child.challenges.take(2).join(' and ').toLowerCase()}.',
-                              ),
-                            ],
+            loading: () => const LoadingView(message: 'Loading profile…'),
+            error: (error, _) => ErrorView(
+              message: error.toString(),
+              onRetry: () => ref.invalidate(childrenProvider(user.id)),
+            ),
+            data: (children) {
+              if (children.isEmpty) {
+                return EmptyState(
+                  icon: Icons.child_care_rounded,
+                  title: 'Create a child profile',
+                  message:
+                      'Add the learner details used to personalize AI lessons.',
+                  action: FilledButton.icon(
+                    onPressed: () => context.push('/children/new'),
+                    icon: const Icon(Icons.person_add_alt_1_rounded),
+                    label: const Text('Add child'),
+                  ),
+                );
+              }
+              final selectedId = ref.watch(selectedChildProvider);
+              final child =
+                  children.where((item) => item.id == selectedId).firstOrNull ??
+                  children.first;
+              final progress = ref.watch(progressProvider(child.id)).value;
+              return ListView(
+                children: [
+                  HeroBanner(
+                    icon: Icons.favorite_rounded,
+                    title: '${child.name}\'s profile',
+                    colorfulTitle: true,
+                    subtitle:
+                        'Everything that shapes lessons made for ${child.name}.',
+                    actions: [
+                      MastheadAction(
+                        icon: Icons.settings_outlined,
+                        tooltip: 'Settings and accessibility',
+                        onPressed: () => context.push('/settings'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _ProfileHero(child: child),
+                  const SizedBox(height: 14),
+                  Card(
+                    color: Theme.of(context).colorScheme.surfaceContainerLow,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.onPrimaryContainer,
+                            child: const Icon(Icons.track_changes_rounded),
                           ),
-                        ),
-                        OutlinedButton(
-                          onPressed: () => context.go('/learn'),
-                          child: const Text('Lessons'),
-                        ),
-                      ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Learning Goal',
+                                  style: TextStyle(fontWeight: FontWeight.w900),
+                                ),
+                                Text(
+                                  child.challenges.isEmpty
+                                      ? 'Building confidence through personalized daily practice.'
+                                      : 'Building confidence with ${child.challenges.take(2).join(' and ').toLowerCase()}.',
+                                ),
+                              ],
+                            ),
+                          ),
+                          OutlinedButton(
+                            onPressed: () => context.go('/learn'),
+                            child: const Text('Lessons'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                const SectionHeading(title: 'About'),
-                const SizedBox(height: 8),
-                ResponsiveGrid(
-                  minItemWidth: 260,
-                  itemHeight: 92,
-                  children: [
-                    _ProfileFact(
-                      icon: Icons.accessibility_new_rounded,
-                      color: const Color(0xFF7347D8),
-                      title: 'Disabilities',
-                      value: _summary(child.disabilities),
-                    ),
-                    _ProfileFact(
-                      icon: Icons.psychology_alt_rounded,
-                      color: const Color(0xFF3285D6),
-                      title: 'Learning Style',
-                      value: _summary(child.learningStyles),
-                    ),
-                    _ProfileFact(
-                      icon: Icons.favorite_rounded,
-                      color: const Color(0xFFE83E75),
-                      title: 'Challenges',
-                      value: _summary(child.challenges),
-                    ),
-                    _ProfileFact(
-                      icon: Icons.star_rounded,
-                      color: const Color(0xFFFF8D28),
-                      title: 'Interests',
-                      value: _summary(child.interests),
-                    ),
-                    _ProfileFact(
-                      icon: Icons.translate_rounded,
-                      color: const Color(0xFF2E9B4C),
-                      title: 'Preferred Language',
-                      value: child.preferredLanguage,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const SectionHeading(title: 'Progress Summary'),
-                const SizedBox(height: 8),
-                ResponsiveGrid(
-                  minItemWidth: 135,
-                  itemHeight: 136,
-                  children: [
-                    MetricCard(
-                      icon: Icons.menu_book_rounded,
-                      value: '${progress?.completedLessons ?? 0}',
-                      label: 'Lessons',
-                    ),
-                    MetricCard(
-                      icon: Icons.query_stats_rounded,
-                      value: '${progress?.averageQuizScore.round() ?? 0}%',
-                      label: 'Average',
-                    ),
-                    MetricCard(
-                      icon: Icons.local_fire_department_rounded,
-                      value: '${progress?.streakDays ?? 0}',
-                      label: 'Day streak',
-                      color: Colors.orange,
-                    ),
-                    MetricCard(
-                      icon: Icons.workspace_premium_rounded,
-                      value: '${progress?.badges.length ?? 0}',
-                      label: 'Badges',
-                      color: Colors.blue,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                SectionHeading(
-                  title: 'Children Profiles',
-                  action: TextButton.icon(
-                    onPressed: () => context.push('/children'),
-                    icon: const Icon(Icons.manage_accounts_outlined),
-                    label: const Text('Manage'),
+                  const SizedBox(height: 16),
+                  const SectionHeading(title: 'About'),
+                  const SizedBox(height: 8),
+                  ResponsiveGrid(
+                    minItemWidth: 260,
+                    itemHeight: 92,
+                    children: [
+                      _ProfileFact(
+                        icon: Icons.accessibility_new_rounded,
+                        color: const Color(0xFF7347D8),
+                        title: 'Disabilities',
+                        value: _summary(child.disabilities),
+                      ),
+                      _ProfileFact(
+                        icon: Icons.psychology_alt_rounded,
+                        color: const Color(0xFF3285D6),
+                        title: 'Learning Style',
+                        value: _summary(child.learningStyles),
+                      ),
+                      _ProfileFact(
+                        icon: Icons.favorite_rounded,
+                        color: const Color(0xFFE83E75),
+                        title: 'Challenges',
+                        value: _summary(child.challenges),
+                      ),
+                      _ProfileFact(
+                        icon: Icons.star_rounded,
+                        color: const Color(0xFFFF8D28),
+                        title: 'Interests',
+                        value: _summary(child.interests),
+                      ),
+                      _ProfileFact(
+                        icon: Icons.translate_rounded,
+                        color: const Color(0xFF2E9B4C),
+                        title: 'Preferred Language',
+                        value: child.preferredLanguage,
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 88,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: children.length + 1,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      if (index == children.length) {
-                        return OutlinedButton.icon(
-                          onPressed: () => context.push('/children/new'),
-                          icon: const Icon(Icons.add_rounded),
-                          label: const Text('Add child'),
+                  const SizedBox(height: 16),
+                  const SectionHeading(title: 'Progress Summary'),
+                  const SizedBox(height: 8),
+                  ResponsiveGrid(
+                    minItemWidth: 135,
+                    itemHeight: 136,
+                    children: [
+                      MetricCard(
+                        icon: Icons.menu_book_rounded,
+                        value: '${progress?.completedLessons ?? 0}',
+                        label: 'Lessons',
+                      ),
+                      MetricCard(
+                        icon: Icons.query_stats_rounded,
+                        value: '${progress?.averageQuizScore.round() ?? 0}%',
+                        label: 'Average',
+                      ),
+                      MetricCard(
+                        icon: Icons.local_fire_department_rounded,
+                        value: '${progress?.streakDays ?? 0}',
+                        label: 'Day streak',
+                        color: Colors.orange,
+                      ),
+                      MetricCard(
+                        icon: Icons.workspace_premium_rounded,
+                        value: '${progress?.badges.length ?? 0}',
+                        label: 'Badges',
+                        color: Colors.blue,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SectionHeading(
+                    title: 'Children Profiles',
+                    action: TextButton.icon(
+                      onPressed: () => context.push('/children'),
+                      icon: const Icon(Icons.manage_accounts_outlined),
+                      label: const Text('Manage'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 88,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: children.length + 1,
+                      separatorBuilder: (_, _) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        if (index == children.length) {
+                          return OutlinedButton.icon(
+                            onPressed: () => context.push('/children/new'),
+                            icon: const Icon(Icons.add_rounded),
+                            label: const Text('Add child'),
+                          );
+                        }
+                        final item = children[index];
+                        return ChoiceChip(
+                          selected: item.id == child.id,
+                          onSelected: (_) => ref
+                              .read(selectedChildProvider.notifier)
+                              .select(item.id),
+                          avatar: ChildAvatar(
+                            name: item.name,
+                            photoUrl: item.photoUrl,
+                            gender: item.gender,
+                            radius: 18,
+                          ),
+                          label: Text('${item.name}\nAge ${item.age}'),
                         );
-                      }
-                      final item = children[index];
-                      return ChoiceChip(
-                        selected: item.id == child.id,
-                        onSelected: (_) => ref
-                            .read(selectedChildProvider.notifier)
-                            .select(item.id),
-                        avatar: ChildAvatar(
-                          name: item.name,
-                          photoUrl: item.photoUrl,
-                          radius: 18,
-                        ),
-                        label: Text('${item.name}\nAge ${item.age}'),
-                      );
-                    },
+                      },
+                    ),
                   ),
-                ),
-              ],
-            );
-          },
-        ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -246,7 +249,12 @@ class _ProfileHero extends StatelessWidget {
         runSpacing: 14,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          ChildAvatar(name: child.name, photoUrl: child.photoUrl, radius: 56),
+          ChildAvatar(
+            name: child.name,
+            photoUrl: child.photoUrl,
+            gender: child.gender,
+            radius: 56,
+          ),
           ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 200, maxWidth: 520),
             child: Column(
@@ -363,37 +371,55 @@ class ChildrenScreen extends ConsumerWidget {
     final children = ref.watch(childrenProvider(user.id));
     final selected = ref.watch(selectedChildProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Child profiles')),
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/children/new'),
         icon: const Icon(Icons.person_add_alt_1_rounded),
         label: const Text('Add child'),
       ),
-      body: ResponsiveBody(
-        child: children.when(
-          loading: () => const LoadingView(message: 'Loading profiles…'),
-          error: (error, _) => ErrorView(
-            message: error.toString(),
-            onRetry: () => ref.invalidate(childrenProvider(user.id)),
-          ),
-          data: (items) => items.isEmpty
-              ? EmptyState(
+      body: AuroraBackground(
+        child: ResponsiveBody(
+          padding: const EdgeInsets.fromLTRB(20, 80, 20, 20),
+          child: children.when(
+            loading: () => const LoadingView(message: 'Loading profiles…'),
+            error: (error, _) => ErrorView(
+              message: error.toString(),
+              onRetry: () => ref.invalidate(childrenProvider(user.id)),
+            ),
+            data: (items) => ListView(
+              children: [
+                HeroBanner(
                   icon: Icons.family_restroom_rounded,
-                  title: 'Create your first child profile',
-                  message:
-                      'Personalization starts with your child’s strengths, interests, and learning needs.',
-                  action: FilledButton.icon(
-                    onPressed: () => context.push('/children/new'),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add child profile'),
-                  ),
-                )
-              : ListView.separated(
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final child = items[index];
-                    return Card(
+                  title: 'Child profiles',
+                  colorfulTitle: true,
+                  subtitle:
+                      'Manage the learners using IKeriKin on this account.',
+                  actions: [
+                    MastheadAction(
+                      icon: Icons.settings_outlined,
+                      tooltip: 'Settings and accessibility',
+                      onPressed: () => context.push('/settings'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (items.isEmpty)
+                  EmptyState(
+                    icon: Icons.family_restroom_rounded,
+                    title: 'Create your first child profile',
+                    message:
+                        'Personalization starts with your child’s strengths, interests, and learning needs.',
+                    action: FilledButton.icon(
+                      onPressed: () => context.push('/children/new'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add child profile'),
+                    ),
+                  )
+                else
+                  for (final child in items) ...[
+                    Card(
                       color: selected == child.id
                           ? Theme.of(context).colorScheme.primaryContainer
                           : null,
@@ -402,6 +428,7 @@ class ChildrenScreen extends ConsumerWidget {
                         leading: ChildAvatar(
                           name: child.name,
                           photoUrl: child.photoUrl,
+                          gender: child.gender,
                         ),
                         title: Row(
                           children: [
@@ -486,9 +513,12 @@ class ChildrenScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -598,146 +628,269 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
   @override
   Widget build(BuildContext context) {
     final busy = ref.watch(childControllerProvider);
+    final isEdit = widget.child != null;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.child == null ? 'Add child profile' : 'Edit child profile',
-        ),
-      ),
-      body: ResponsiveBody(
-        maxWidth: 760,
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              Center(
-                child: Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 54,
-                      backgroundImage: _photo != null
-                          ? MemoryImage(_photo!)
-                          : widget.child?.photoUrl != null
-                          ? NetworkImage(widget.child!.photoUrl!)
-                          : null,
-                      child: _photo == null && widget.child?.photoUrl == null
-                          ? const Icon(Icons.child_care_rounded, size: 52)
-                          : null,
-                    ),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: IconButton.filled(
-                        onPressed: _pickPhoto,
-                        icon: const Icon(Icons.camera_alt_rounded),
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+      body: AuroraBackground(
+        child: ResponsiveBody(
+          maxWidth: 900,
+          padding: const EdgeInsets.fromLTRB(20, 80, 20, 20),
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              children: [
+                HeroBanner(
+                  icon: isEdit
+                      ? Icons.edit_rounded
+                      : Icons.person_add_alt_1_rounded,
+                  title: isEdit ? 'Edit child profile' : 'Add child profile',
+                  colorfulTitle: true,
+                  subtitle: isEdit
+                      ? 'Keep ${widget.child!.name}\'s learning profile up to date.'
+                      : 'Add the learner details used to personalize AI lessons.',
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 54,
+                        backgroundImage: _photo != null
+                            ? MemoryImage(_photo!)
+                            : widget.child?.photoUrl != null
+                            ? NetworkImage(widget.child!.photoUrl!)
+                            : null,
+                        child: _photo == null && widget.child?.photoUrl == null
+                            ? const Icon(Icons.child_care_rounded, size: 52)
+                            : null,
                       ),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: IconButton.filled(
+                          onPressed: _pickPhoto,
+                          icon: const Icon(Icons.camera_alt_rounded),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                TextFormField(
+                  controller: _name,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'Child’s name',
+                    prefixIcon: Icon(Icons.badge_outlined),
+                  ),
+                  validator: (value) => (value?.trim().length ?? 0) >= 2
+                      ? null
+                      : 'Enter the child’s name',
+                ),
+                const SizedBox(height: 14),
+                ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                  ),
+                  leading: const Icon(Icons.cake_outlined),
+                  title: const Text('Birthday'),
+                  subtitle: Text(
+                    '${_birthday.month}/${_birthday.day}/${_birthday.year}',
+                  ),
+                  trailing: const Icon(Icons.edit_calendar_rounded),
+                  onTap: () async {
+                    final selected = await showDatePicker(
+                      context: context,
+                      initialDate: _birthday,
+                      firstDate: DateTime(1995),
+                      lastDate: DateTime.now(),
+                    );
+                    if (selected != null) setState(() => _birthday = selected);
+                  },
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Gender',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    _GenderOption(
+                      label: 'Boy',
+                      asset: 'assets/branding/boy_icon.jpg',
+                      selected: _gender == 'Male',
+                      onTap: () => setState(() => _gender = 'Male'),
+                    ),
+                    _GenderOption(
+                      label: 'Girl',
+                      asset: 'assets/branding/girl_icon.jpg',
+                      selected: _gender == 'Female',
+                      onTap: () => setState(() => _gender = 'Female'),
+                    ),
+                    _GenderOption(
+                      label: 'Non-binary',
+                      icon: Icons.face_rounded,
+                      selected: _gender == 'Non-binary',
+                      onTap: () => setState(() => _gender = 'Non-binary'),
+                    ),
+                    _GenderOption(
+                      label: 'Prefer not to say',
+                      icon: Icons.wc_rounded,
+                      selected: _gender == 'Prefer not to say',
+                      onTap: () =>
+                          setState(() => _gender = 'Prefer not to say'),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: _name,
-                textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(
-                  labelText: 'Child’s name',
-                  prefixIcon: Icon(Icons.badge_outlined),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  initialValue: _language,
+                  decoration: const InputDecoration(
+                    labelText: 'Preferred language',
+                    prefixIcon: Icon(Icons.language_rounded),
+                  ),
+                  items: ProfileOptions.languages
+                      .map(
+                        (value) =>
+                            DropdownMenuItem(value: value, child: Text(value)),
+                      )
+                      .toList(),
+                  onChanged: (value) => setState(() => _language = value!),
                 ),
-                validator: (value) => (value?.trim().length ?? 0) >= 2
-                    ? null
-                    : 'Enter the child’s name',
-              ),
-              const SizedBox(height: 14),
-              ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  side: BorderSide(
-                    color: Theme.of(context).colorScheme.outlineVariant,
+                _ChoiceSection(
+                  title: 'Disabilities',
+                  subtitle:
+                      'Select all that apply. This helps adapt content respectfully.',
+                  options: ProfileOptions.disabilities,
+                  selected: _disabilities,
+                  onChanged: (value) => setState(() => _disabilities = value),
+                ),
+                _ChoiceSection(
+                  title: 'Learning challenges',
+                  options: ProfileOptions.challenges,
+                  selected: _challenges,
+                  onChanged: (value) => setState(() => _challenges = value),
+                ),
+                _ChoiceSection(
+                  title: 'Interests',
+                  subtitle: 'Required for personalized stories and activities.',
+                  options: ProfileOptions.interests,
+                  selected: _interests,
+                  onChanged: (value) => setState(() => _interests = value),
+                ),
+                _ChoiceSection(
+                  title: 'Learning styles',
+                  subtitle: 'Choose at least one.',
+                  options: ProfileOptions.learningStyles,
+                  selected: _styles,
+                  onChanged: (value) => setState(() => _styles = value),
+                ),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: busy ? null : _save,
+                  icon: const Icon(Icons.save_rounded),
+                  label: Text(
+                    widget.child == null ? 'Create profile' : 'Save changes',
                   ),
                 ),
-                leading: const Icon(Icons.cake_outlined),
-                title: const Text('Birthday'),
-                subtitle: Text(
-                  '${_birthday.month}/${_birthday.day}/${_birthday.year}',
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A selectable gender tile: the illustrated boy/girl mark when [asset] is
+/// given, otherwise a generic icon, with a label underneath.
+class _GenderOption extends StatelessWidget {
+  const _GenderOption({
+    required this.label,
+    this.asset,
+    this.icon,
+    required this.selected,
+    required this.onTap,
+  }) : assert(
+         asset != null || icon != null,
+         'Provide either an illustrated asset or a fallback icon.',
+       );
+
+  final String label;
+  final String? asset;
+  final IconData? icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    const size = 76.0;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: BouncyTap(
+        scale: .95,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppTheme.brandViolet.withValues(alpha: .1)
+                : theme.colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(AppTheme.radius),
+            border: Border.all(
+              color: selected
+                  ? AppTheme.brandViolet
+                  : theme.colorScheme.outlineVariant,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(size / 2),
+                child: asset != null
+                    ? Image.asset(
+                        asset!,
+                        width: size,
+                        height: size,
+                        fit: BoxFit.cover,
+                      )
+                    : Container(
+                        width: size,
+                        height: size,
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        child: Icon(
+                          icon,
+                          size: size * .5,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: selected ? AppTheme.brandViolet : null,
                 ),
-                trailing: const Icon(Icons.edit_calendar_rounded),
-                onTap: () async {
-                  final selected = await showDatePicker(
-                    context: context,
-                    initialDate: _birthday,
-                    firstDate: DateTime(1995),
-                    lastDate: DateTime.now(),
-                  );
-                  if (selected != null) setState(() => _birthday = selected);
-                },
               ),
-              const SizedBox(height: 14),
-              DropdownButtonFormField<String>(
-                initialValue: _gender,
-                decoration: const InputDecoration(
-                  labelText: 'Gender',
-                  prefixIcon: Icon(Icons.wc_rounded),
-                ),
-                items: ['Female', 'Male', 'Non-binary', 'Prefer not to say']
-                    .map(
-                      (value) =>
-                          DropdownMenuItem(value: value, child: Text(value)),
-                    )
-                    .toList(),
-                onChanged: (value) => setState(() => _gender = value!),
-              ),
-              const SizedBox(height: 14),
-              DropdownButtonFormField<String>(
-                initialValue: _language,
-                decoration: const InputDecoration(
-                  labelText: 'Preferred language',
-                  prefixIcon: Icon(Icons.language_rounded),
-                ),
-                items: ProfileOptions.languages
-                    .map(
-                      (value) =>
-                          DropdownMenuItem(value: value, child: Text(value)),
-                    )
-                    .toList(),
-                onChanged: (value) => setState(() => _language = value!),
-              ),
-              _ChoiceSection(
-                title: 'Disabilities',
-                subtitle:
-                    'Select all that apply. This helps adapt content respectfully.',
-                options: ProfileOptions.disabilities,
-                selected: _disabilities,
-                onChanged: (value) => setState(() => _disabilities = value),
-              ),
-              _ChoiceSection(
-                title: 'Learning challenges',
-                options: ProfileOptions.challenges,
-                selected: _challenges,
-                onChanged: (value) => setState(() => _challenges = value),
-              ),
-              _ChoiceSection(
-                title: 'Interests',
-                subtitle: 'Required for personalized stories and activities.',
-                options: ProfileOptions.interests,
-                selected: _interests,
-                onChanged: (value) => setState(() => _interests = value),
-              ),
-              _ChoiceSection(
-                title: 'Learning styles',
-                subtitle: 'Choose at least one.',
-                options: ProfileOptions.learningStyles,
-                selected: _styles,
-                onChanged: (value) => setState(() => _styles = value),
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: busy ? null : _save,
-                icon: const Icon(Icons.save_rounded),
-                label: Text(
-                  widget.child == null ? 'Create profile' : 'Save changes',
-                ),
-              ),
-              const SizedBox(height: 24),
             ],
           ),
         ),

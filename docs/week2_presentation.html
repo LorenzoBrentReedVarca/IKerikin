@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IKeriKin — Week 2 Progress Presentation</title>
+<style>
+@page { size: 13.333in 7.5in; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { color: #24202b; font: 16px/1.45 "Segoe UI", sans-serif; }
+.slide {
+  width: 13.333in; height: 7.5in; padding: 0.6in 0.9in;
+  break-after: page; page-break-after: always;
+  display: flex; flex-direction: column; justify-content: center;
+  position: relative; overflow: hidden;
+  background: #fff;
+}
+.slide:last-child { break-after: auto; page-break-after: auto; }
+.slide.dark { background: linear-gradient(135deg, #5731b5, #8a5cf5 60%, #d93676); color: #fff; }
+.slide.tint { background: #f8f6fd; }
+
+.eyebrow { color: #d93676; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; font-size: 13px; margin: 0 0 10px; }
+.dark .eyebrow { color: #ffd7e8; }
+h1 { font-size: 46px; margin: 0 0 12px; color: #5731b5; }
+h2 { font-size: 30px; margin: 0 0 18px; color: #5731b5; }
+.dark h1, .dark h2 { color: #fff; }
+.tagline { font-size: 20px; font-style: italic; color: #d93676; margin: 0 0 8px; }
+.dark .tagline { color: #ffe1ec; }
+.meta { font-size: 15px; color: #55506a; margin-top: 6px; }
+.dark .meta { color: #ece4fb; }
+
+ul.big { list-style: none; padding: 0; margin: 0; }
+ul.big li { font-size: 19px; margin: 10px 0; padding-left: 34px; position: relative; }
+ul.big li::before { content: "\2726"; position: absolute; left: 0; color: #d93676; }
+
+.check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 28px; margin-top: 8px; }
+.check-grid li { font-size: 17px; list-style: none; padding-left: 30px; position: relative; }
+.check-grid li::before { content: "\2713"; position: absolute; left: 0; color: #2ba36b; font-weight: 900; }
+
+.badge-row { display: flex; gap: 14px; margin-top: 18px; flex-wrap: wrap; }
+.badge { background: #ece4fb; color: #5731b5; font-weight: 700; padding: 6px 16px; border-radius: 20px; font-size: 14px; }
+
+table.slide-table { width: 100%; border-collapse: collapse; font-size: 14.5px; margin-top: 10px; }
+table.slide-table th, table.slide-table td { border: 1px solid #ddd; padding: 7px 10px; text-align: left; }
+table.slide-table th { background: #5731b5; color: #fff; }
+table.slide-table tr:nth-child(even) td { background: #fff; }
+.center { text-align: center; }
+.risk-high { color: #b3261e; font-weight: 700; }
+.risk-medium { color: #a15c00; font-weight: 700; }
+
+.gantt-mini { display: flex; height: 46px; border-radius: 6px; overflow: hidden; margin: 22px 0 8px; box-shadow: 0 2px 10px rgba(87,49,181,.15); }
+.gantt-mini div { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12.5px; font-weight: 700; }
+.g1 { flex: 2; background: #6d42d8; } .g2 { flex: 2; background: #8a5cf5; } .g3 { flex: 2; background: #d93676; }
+.g4 { flex: 2; background: #ef7fa8; } .g5 { flex: 1; background: #f2994a; } .g6 { flex: 1; background: #2ba36b; }
+.g7 { flex: 1; background: #2b8fa3; }
+.week-scale { display: flex; font-size: 11px; color: #8a84a0; margin-bottom: 4px; }
+.week-scale span { flex: 1; text-align: center; }
+
+.slide-footer { position: absolute; bottom: 0.35in; left: 0.9in; right: 0.9in; display: flex; justify-content: space-between; font-size: 12px; color: #9992ad; }
+.dark .slide-footer { color: #e3d9fb; }
+
+.two-col { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 40px; align-items: center; }
+.avatar-badge { width: 140px; height: 140px; border-radius: 32px; background: linear-gradient(135deg,#6d42d8,#d93676); display:flex; align-items:center; justify-content:center; margin: 0 auto; }
+.avatar-badge svg { width: 76px; height: 76px; }
+
+.center-text { text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- Slide 1: Title -->
+<section class="slide dark center-text" style="align-items:center;">
+  <div class="avatar-badge" style="margin-bottom:22px;">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21s-7.5-4.7-10-9.4C.4 8 2 4.5 5.5 4a5 5 0 0 1 6.5 2 5 5 0 0 1 6.5-2C22 4.5 23.6 8 22 11.6 19.5 16.3 12 21 12 21z" fill="#fff"/></svg>
+  </div>
+  <h1 style="text-align:center;">IKeriKin</h1>
+  <p class="tagline" style="text-align:center;">I Care for Your Kin</p>
+  <p class="meta" style="text-align:center; font-size:18px;">Project Timeline, Milestones, and Risk Assessment</p>
+  <p class="meta" style="text-align:center;">Week 2 Progress Presentation &nbsp;·&nbsp; Jul 20–26, 2026</p>
+  <p class="meta" style="text-align:center;">github.com/LorenzoBrentReedVarca/IKeriKin</p>
+  <div class="slide-footer"><span>IKeriKin</span><span>1</span></div>
+</section>
+
+<!-- Slide 2: Agenda -->
+<section class="slide">
+  <p class="eyebrow">Agenda</p>
+  <h2>What we'll cover today</h2>
+  <ul class="big">
+    <li>Project overview &amp; problem statement</li>
+    <li>Week 2 progress checklist</li>
+    <li>Project timeline / Gantt chart</li>
+    <li>Milestones &amp; deliverables</li>
+    <li>Risk assessment &amp; contingency plan</li>
+    <li>Reflection &amp; next steps</li>
+  </ul>
+  <div class="slide-footer"><span>IKeriKin</span><span>2</span></div>
+</section>
+
+<!-- Slide 3: Project overview -->
+<section class="slide tint">
+  <p class="eyebrow">Project Overview</p>
+  <h2>AI-powered personalized learning for SPED children</h2>
+  <p style="font-size:17px; max-width:960px;">IKeriKin is a Flutter app that gives Filipino children with special educational needs —
+  ASD, ADHD, dyslexia, Down syndrome, speech delay, and developmental delay — access to
+  personalized, accessible learning content that mainstream materials don't provide.</p>
+  <div class="badge-row">
+    <span class="badge">SDG 4 · Quality Education</span>
+    <span class="badge">SDG 10 · Reduced Inequalities</span>
+    <span class="badge">Flutter · Riverpod · GoRouter</span>
+    <span class="badge">Supabase (Auth, DB, Edge Functions)</span>
+  </div>
+  <div class="slide-footer"><span>IKeriKin</span><span>3</span></div>
+</section>
+
+<!-- Slide 4: Progress checklist -->
+<section class="slide">
+  <p class="eyebrow">Week 2 Progress</p>
+  <h2>Checklist — what's done</h2>
+  <ul class="check-grid">
+    <li>Revised project proposal</li>
+    <li>Flutter project successfully created</li>
+    <li>Organized project structure</li>
+    <li>Basic UI completed</li>
+    <li>Working navigation</li>
+    <li>GitHub repository with initial commit</li>
+    <li>PDF documentation with screenshots</li>
+    <li>GitHub repository link included</li>
+  </ul>
+  <div class="slide-footer"><span>IKeriKin</span><span>4</span></div>
+</section>
+
+<!-- Slide 5: Gantt chart -->
+<section class="slide tint">
+  <p class="eyebrow">Project Timeline</p>
+  <h2>Gantt Chart — 7 phases across 11 weeks</h2>
+  <div class="week-scale">
+    <span>Wk1-2</span><span>Wk3-4</span><span>Wk5-6</span><span>Wk7-8</span><span>Wk9</span><span>Wk10</span><span>Wk11</span>
+  </div>
+  <div class="gantt-mini">
+    <div class="g1">Initiation</div>
+    <div class="g2">System Design</div>
+    <div class="g3">Core Dev</div>
+    <div class="g4">AI Integration</div>
+    <div class="g5">Testing</div>
+    <div class="g6">Deployment</div>
+    <div class="g7">Presentation</div>
+  </div>
+  <p style="font-size:14px; color:#55506a; margin-top:10px;">We are currently in Week 2 of Phase 1 — Initiation &amp; Planning.</p>
+  <div class="slide-footer"><span>IKeriKin</span><span>5</span></div>
+</section>
+
+<!-- Slide 6: Milestones -->
+<section class="slide">
+  <p class="eyebrow">Milestones &amp; Deliverables</p>
+  <h2>Key checkpoints across 11 weeks</h2>
+  <table class="slide-table">
+    <tr><th>Milestone</th><th>Expected Output</th><th class="center">Target</th></tr>
+    <tr><td>Project Proposal Approved</td><td>Approved Proposal</td><td class="center">Week 2</td></tr>
+    <tr><td>System Design Completed</td><td>Design Documents</td><td class="center">Week 4</td></tr>
+    <tr><td>Prototype Finished</td><td>Functional Prototype</td><td class="center">Week 6</td></tr>
+    <tr><td>System Testing</td><td>Test Report</td><td class="center">Week 8</td></tr>
+    <tr><td>Final System Completed</td><td>Completed System</td><td class="center">Week 10</td></tr>
+    <tr><td>Final Presentation</td><td>Presentation &amp; Documentation</td><td class="center">Week 11</td></tr>
+  </table>
+  <div class="slide-footer"><span>IKeriKin</span><span>6</span></div>
+</section>
+
+<!-- Slide 7: Risks -->
+<section class="slide tint">
+  <p class="eyebrow">Risk Assessment</p>
+  <h2>Top risks &amp; contingency plans</h2>
+  <table class="slide-table">
+    <tr><th>Risk</th><th class="center">Impact</th><th>Contingency</th></tr>
+    <tr><td>Delay in AI/Supabase integration</td><td class="center risk-high">High</td><td>Local/mock lesson generator fallback</td></tr>
+    <tr><td>Sensitive child data privacy</td><td class="center risk-high">High</td><td>Supabase Auth + row-level security, minimal data collection</td></tr>
+    <tr><td>Hardware failure / device loss</td><td class="center risk-high">High</td><td>Frequent GitHub commits, cloud-stored data</td></tr>
+    <tr><td>Internet connectivity issues</td><td class="center risk-medium">Medium</td><td>Offline preview mode + backup hotspot</td></tr>
+    <tr><td>Cross-platform UI inconsistencies</td><td class="center risk-medium">Medium</td><td>Shared responsive widgets, multi-size testing each sprint</td></tr>
+  </table>
+  <div class="slide-footer"><span>IKeriKin</span><span>7</span></div>
+</section>
+
+<!-- Slide 8: Reflection -->
+<section class="slide">
+  <p class="eyebrow">Reflection</p>
+  <h2>What we learned this week</h2>
+  <p style="font-size:17px; max-width:980px;">We revised the IKeriKin proposal and set up the Flutter project with a clean, layered
+  structure (presentation, domain, data, application, core). We implemented the five core
+  screens — Home, Learn, AI Lesson Generator, AI Lesson, and Progress — connected with
+  working navigation, and polished the UI with a consistent Material 3 theme, responsive
+  layouts, and accessibility support.</p>
+  <p style="font-size:17px; max-width:980px;">The main challenge was making layouts respond correctly across screen sizes, from
+  phones to desktop web. We resolved this with a shared ResponsiveGrid/ResponsiveBody
+  widget and a navigation shell that adapts to screen width, verified with
+  <code>flutter analyze</code> and <code>flutter test</code> before every commit.</p>
+  <div class="slide-footer"><span>IKeriKin</span><span>8</span></div>
+</section>
+
+<!-- Slide 9: Thank you -->
+<section class="slide dark center-text" style="align-items:center;">
+  <h1 style="text-align:center;">Thank you</h1>
+  <p class="tagline" style="text-align:center;">Questions &amp; Discussion</p>
+  <p class="meta" style="text-align:center;">github.com/LorenzoBrentReedVarca/IKeriKin</p>
+  <div class="slide-footer"><span>IKeriKin</span><span>9</span></div>
+</section>
+
+</body>
+</html>
