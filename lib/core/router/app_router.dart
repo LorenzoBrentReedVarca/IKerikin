@@ -106,6 +106,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             ChildFormScreen(child: state.extra as ChildProfile),
       ),
       GoRoute(
+        path: '/children/new/preparing',
+        builder: (_, state) =>
+            PreparingLessonsScreen(child: state.extra as ChildProfile),
+      ),
+      GoRoute(
         path: '/lesson/:id',
         builder: (_, state) => LessonRouteScreen(
           lessonId: state.pathParameters['id']!,

@@ -192,6 +192,11 @@ class SupabaseChildRepository implements ChildRepository {
 /// Swappable AI generation provider contract.
 abstract interface class AiLessonProvider {
   Future<LessonContent> generate(LessonRequest request, ChildProfile child);
+
+  /// Suggests a starter curriculum of lesson goals tailored to a child's
+  /// profile, so a fresh profile can be turned into a ready lesson shelf
+  /// automatically instead of starting empty.
+  Future<List<LessonPlanItem>> generatePlan(ChildProfile child);
 }
 
 /// Secure Supabase Edge Function AI provider.
@@ -214,6 +219,24 @@ class SupabaseAiLessonProvider implements AiLessonProvider {
     return LessonContent.fromJson(
       Map<String, dynamic>.from(response.data as Map),
     );
+  }
+
+  @override
+  Future<List<LessonPlanItem>> generatePlan(ChildProfile child) async {
+    final response = await _client.functions.invoke(
+      AppConfig.aiPlanFunctionName,
+      body: {'child': child.toJson()},
+    );
+    if (response.status < 200 || response.status >= 300) {
+      throw Exception('Lesson planning service returned status ${response.status}.');
+    }
+    final data = Map<String, dynamic>.from(response.data as Map);
+    return (data['lessons'] as List? ?? const [])
+        .map(
+          (item) =>
+              LessonPlanItem.fromJson(Map<String, dynamic>.from(item as Map)),
+        )
+        .toList();
   }
 }
 
@@ -364,6 +387,7 @@ class SupabaseVideoJobRepository implements VideoJobRepository {
 abstract interface class LessonRepository {
   Future<List<Lesson>> getLessons(String childId);
   Future<Lesson> generate(LessonRequest request, ChildProfile child);
+  Future<List<LessonPlanItem>> planStarterLessons(ChildProfile child);
   Future<void> recordCompletion(
     String lessonId,
     String childId,
@@ -387,6 +411,10 @@ class SupabaseLessonRepository implements LessonRepository {
         .order('created_at', ascending: false);
     return rows.map(Lesson.fromJson).toList();
   }
+
+  @override
+  Future<List<LessonPlanItem>> planStarterLessons(ChildProfile child) =>
+      _ai.generatePlan(child);
 
   @override
   Future<Lesson> generate(LessonRequest request, ChildProfile child) async {

@@ -331,6 +331,94 @@ final lessonControllerProvider = NotifierProvider<LessonController, bool>(
   LessonController.new,
 );
 
+/// Progress snapshot while a child's starter lesson curriculum is being
+/// generated, driving the "preparing your lessons" loading screen.
+@immutable
+class StarterLessonsProgress {
+  const StarterLessonsProgress({
+    required this.completed,
+    required this.total,
+    required this.currentGoal,
+    this.done = false,
+    this.error,
+  });
+  final int completed;
+  final int total;
+  final String currentGoal;
+  final bool done;
+  final String? error;
+}
+
+/// Generates a starter curriculum of text-only lessons (no animated video —
+/// that stays an explicit, opt-in action) right after a child profile is
+/// created. Families who can't afford special schools get a ready set of
+/// lessons immediately instead of an empty library.
+class StarterLessonsController extends Notifier<StarterLessonsProgress?> {
+  @override
+  StarterLessonsProgress? build() => null;
+
+  Future<void> generate(ChildProfile child) async {
+    state = const StarterLessonsProgress(
+      completed: 0,
+      total: 0,
+      currentGoal: 'Getting to know your child…',
+    );
+    try {
+      final plan = await ref
+          .read(lessonRepositoryProvider)
+          .planStarterLessons(child);
+      final total = plan.length;
+      for (final entry in plan.indexed) {
+        final (index, item) = entry;
+        state = StarterLessonsProgress(
+          completed: index,
+          total: total,
+          currentGoal: item.goal,
+        );
+        final request = LessonRequest(
+          id: const Uuid().v4(),
+          childId: child.id,
+          goal: item.goal,
+          difficulty: item.difficulty,
+          language: child.preferredLanguage,
+          durationMinutes: 1,
+          additionalNotes: '',
+          createdAt: DateTime.now(),
+          videoDurationSeconds: 60,
+          contentType: item.contentType,
+        );
+        try {
+          await ref.read(lessonRepositoryProvider).generate(request, child);
+        } catch (_) {
+          // One failed lesson shouldn't block the rest of the starter
+          // curriculum from being created.
+        }
+      }
+      ref.invalidate(lessonsProvider(child.id));
+      state = StarterLessonsProgress(
+        completed: total,
+        total: total,
+        currentGoal: '',
+        done: true,
+      );
+    } catch (error) {
+      state = StarterLessonsProgress(
+        completed: 0,
+        total: 0,
+        currentGoal: '',
+        done: true,
+        error: error.toString(),
+      );
+    }
+  }
+}
+
+/// Provides starter-curriculum generation progress.
+final starterLessonsControllerProvider =
+    NotifierProvider<StarterLessonsController, StarterLessonsProgress?>(
+      StarterLessonsController.new,
+    );
+
 /// Coordinates animated lesson video generation and retry mutations.
 class VideoJobController extends Notifier<bool> {
   @override

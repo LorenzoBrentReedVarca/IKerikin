@@ -41,6 +41,13 @@ abstract final class AppConfig {
     defaultValue: 'generate-lesson',
   );
 
+  /// Edge Function name that suggests a starter curriculum of lesson goals
+  /// for a newly created child profile.
+  static const aiPlanFunctionName = String.fromEnvironment(
+    'AI_PLAN_FUNCTION_NAME',
+    defaultValue: 'generate-lesson-plan',
+  );
+
   /// Initializes the Supabase client. Called once at app startup.
   static Future<void> initialize() async {
     await Supabase.initialize(

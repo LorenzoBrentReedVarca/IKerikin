@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -608,8 +609,9 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
       photoUrl: widget.child?.photoUrl,
       createdAt: widget.child?.createdAt ?? DateTime.now(),
     );
+    final isNewChild = widget.child == null;
     try {
-      await ref
+      final saved = await ref
           .read(childControllerProvider.notifier)
           .save(
             parentId: user.id,
@@ -617,7 +619,16 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
             photoBytes: _photo,
             photoExtension: _photoExtension,
           );
-      if (mounted) context.pop();
+      if (!mounted) return;
+      // A brand-new profile gets a ready-made starter curriculum instead of
+      // an empty shelf — families without access to special schools need
+      // lessons available right away, not a blank "create your first lesson"
+      // screen. Editing an existing profile doesn't re-trigger this.
+      if (isNewChild) {
+        context.pushReplacement('/children/new/preparing', extra: saved);
+      } else {
+        context.pop();
+      }
     } catch (error) {
       if (mounted) showMessage(context, error.toString(), error: true);
     }
@@ -941,4 +952,295 @@ class _ChoiceSection extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// Shown right after a new child profile is created while the AI builds a
+/// starter curriculum of lessons for them — so a family lands on a full
+/// lesson shelf instead of an empty one. Generation keeps running even if
+/// the parent skips ahead, since the controller lives above this screen.
+class PreparingLessonsScreen extends ConsumerStatefulWidget {
+  const PreparingLessonsScreen({super.key, required this.child});
+  final ChildProfile child;
+
+  @override
+  ConsumerState<PreparingLessonsScreen> createState() =>
+      _PreparingLessonsScreenState();
+}
+
+class _PreparingLessonsScreenState
+    extends ConsumerState<PreparingLessonsScreen> {
+  static const _funMessages = [
+    'Loading your games…',
+    'Packing flashcards…',
+    'Writing today\'s story…',
+    'Shuffling memory cards…',
+    'Getting quizzes ready…',
+    'Matching pieces together…',
+    'Tidying up the lesson shelf…',
+  ];
+
+  int _messageIndex = 0;
+  Timer? _messageTimer;
+  bool _navigated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(starterLessonsControllerProvider.notifier).generate(
+        widget.child,
+      );
+    });
+    _messageTimer = Timer.periodic(const Duration(milliseconds: 2200), (_) {
+      if (!mounted) return;
+      setState(() => _messageIndex = (_messageIndex + 1) % _funMessages.length);
+    });
+  }
+
+  @override
+  void dispose() {
+    _messageTimer?.cancel();
+    super.dispose();
+  }
+
+  void _goHome() {
+    if (_navigated) return;
+    _navigated = true;
+    context.go('/home');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = ref.watch(starterLessonsControllerProvider);
+    ref.listen<StarterLessonsProgress?>(starterLessonsControllerProvider, (
+      previous,
+      next,
+    ) {
+      if (next != null && next.done && next.error == null) {
+        Future.delayed(const Duration(milliseconds: 900), _goHome);
+      }
+    });
+
+    final hasError = progress?.error != null;
+    final total = progress?.total ?? 0;
+    final completed = progress?.completed ?? 0;
+    final finished = progress?.done == true && !hasError;
+    final ratio = total == 0 ? null : (completed / total).clamp(0.0, 1.0);
+
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(gradient: AppTheme.heroGradient(context)),
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (hasError)
+                      _buildError(context)
+                    else if (finished)
+                      _buildFinished(context)
+                    else
+                      _buildWorking(context, ratio, completed, total, progress),
+                    const SizedBox(height: 28),
+                    if (!hasError && !finished)
+                      TextButton(
+                        onPressed: _goHome,
+                        child: const Text(
+                          'Skip for now',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWorking(
+    BuildContext context,
+    double? ratio,
+    int completed,
+    int total,
+    StarterLessonsProgress? progress,
+  ) {
+    final reduced = prefersReducedMotion(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 96,
+          height: 96,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 96,
+                height: 96,
+                child: CircularProgressIndicator(
+                  value: ratio,
+                  strokeWidth: 4,
+                  color: Colors.white,
+                  backgroundColor: Colors.white.withValues(alpha: .25),
+                ),
+              ),
+              const GeminiSparkleIcon(size: 40),
+            ],
+          ),
+        ),
+        const SizedBox(height: 28),
+        Text(
+          'Getting ${widget.child.name}\'s lessons ready',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 14),
+        AnimatedSwitcher(
+          duration: reduced
+              ? Duration.zero
+              : const Duration(milliseconds: 300),
+          child: Text(
+            _funMessages[_messageIndex],
+            key: ValueKey(_messageIndex),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(height: 22),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: ratio,
+            minHeight: 8,
+            color: Colors.white,
+            backgroundColor: Colors.white.withValues(alpha: .25),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          total == 0
+              ? 'Planning a starter curriculum…'
+              : 'Lesson ${(completed + 1).clamp(1, total)} of $total',
+          style: const TextStyle(color: Colors.white70, fontSize: 13),
+        ),
+        if ((progress?.currentGoal ?? '').isNotEmpty) ...[
+          const SizedBox(height: 6),
+          AnimatedSwitcher(
+            duration: reduced
+                ? Duration.zero
+                : const Duration(milliseconds: 300),
+            child: Text(
+              '“${progress!.currentGoal}”',
+              key: ValueKey(progress.currentGoal),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFinished(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 96,
+          height: 96,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: .18),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.check_circle_rounded,
+            color: Colors.white,
+            size: 56,
+          ),
+        ),
+        const SizedBox(height: 28),
+        Text(
+          '${widget.child.name}\'s lesson shelf is ready!',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Taking you home…',
+          style: TextStyle(color: Colors.white70, fontSize: 14),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildError(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 96,
+          height: 96,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: .18),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.favorite_rounded,
+            color: Colors.white,
+            size: 44,
+          ),
+        ),
+        const SizedBox(height: 28),
+        Text(
+          '${widget.child.name}\'s profile is all set',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'We had trouble creating lessons automatically this time. You can create one anytime from the Create tab.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+        ),
+        const SizedBox(height: 22),
+        FilledButton(
+          onPressed: _goHome,
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: AppTheme.brandViolet,
+          ),
+          child: const Text('Continue to Home'),
+        ),
+      ],
+    );
+  }
 }

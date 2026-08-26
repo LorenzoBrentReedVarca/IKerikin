@@ -415,6 +415,31 @@ class LessonRequest {
   };
 }
 
+/// A single suggested lesson goal from an AI-generated starter curriculum,
+/// created right after a child profile is saved so families get a ready
+/// set of lessons immediately instead of an empty library.
+@immutable
+class LessonPlanItem {
+  const LessonPlanItem({
+    required this.goal,
+    required this.difficulty,
+    required this.contentType,
+  });
+  final String goal;
+  final LessonDifficulty difficulty;
+  final String contentType;
+
+  factory LessonPlanItem.fromJson(Map<String, dynamic> json) =>
+      LessonPlanItem(
+        goal: json['goal'] as String? ?? '',
+        difficulty: LessonDifficulty.values.firstWhere(
+          (value) => value.name == json['difficulty'],
+          orElse: () => LessonDifficulty.easy,
+        ),
+        contentType: json['content_type'] as String? ?? 'Story',
+      );
+}
+
 /// A generated and persisted learning lesson.
 @immutable
 class Lesson {
