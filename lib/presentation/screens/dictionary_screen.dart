@@ -54,9 +54,8 @@ class _WordExplorerScreenState extends ConsumerState<WordExplorerScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const HeroBanner(
-                icon: Icons.menu_book_rounded,
+                kicker: 'Word explorer',
                 title: 'Look up a word',
-                colorfulTitle: true,
                 subtitle:
                     'Powered by the Free Dictionary API — search any English '
                     'word to see phonetics, meanings, and examples.',

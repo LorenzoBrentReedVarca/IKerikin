@@ -13,7 +13,7 @@ class AccessibilitySettings {
     this.voiceNavigation = false,
     this.textToSpeech = false,
     this.largeButtons = false,
-    this.closedCaptions = false,
+    this.closedCaptions = true,
   });
 
   final bool largeFonts;

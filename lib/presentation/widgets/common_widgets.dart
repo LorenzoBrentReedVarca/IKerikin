@@ -51,89 +51,80 @@ class AuroraBackground extends StatelessWidget {
   }
 }
 
-/// Hero surface used for the top of every dashboard screen. Wraps a title,
-/// subtitle, and optional trailing widget in the app's signature gradient.
+/// Route header used at the top of every interior screen, styled after
+/// Kombai's `.route-bar`: a plain, near-white bar carrying the small
+/// rainbow IKeriKin wordmark, a short kicker and title, and a row of
+/// page-level action buttons — never the big gradient hero the Home tab
+/// uses for its own masthead.
 class HeroBanner extends StatelessWidget {
   const HeroBanner({
     super.key,
     required this.title,
+    this.kicker,
     this.subtitle,
-    this.icon,
-    this.trailing,
     this.actions = const [],
-    this.colorfulTitle = false,
   });
   final String title;
+
+  /// Short uppercase label shown above [title], e.g. "Your learning space".
+  final String? kicker;
+
+  /// Optional supporting sentence shown below the title row.
   final String? subtitle;
-  final IconData? icon;
-  final Widget? trailing;
 
-  /// Circular translucent icon buttons rendered after [trailing], for
-  /// page-level shortcuts (settings, search, and the like).
+  /// Page-level shortcut buttons (settings, search, and the like).
   final List<Widget> actions;
-
-  /// Renders [title] as a [BubbleWordmark] — the same rainbow bubble-letter
-  /// treatment as the Home tab's brand name — instead of plain white text.
-  final bool colorfulTitle;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final dark = theme.brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 22, 18, 22),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
+        color: dark
+            ? scheme.surfaceContainerLowest
+            : Colors.white.withValues(alpha: .86),
         borderRadius: BorderRadius.circular(AppTheme.radius),
-        gradient: AppTheme.heroGradient(context),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.brandViolet.withValues(alpha: .24),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-            spreadRadius: -10,
-          ),
-        ],
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: .5)),
       ),
       child: Row(
         children: [
-          if (icon != null)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: .18),
-                borderRadius: BorderRadius.circular(AppTheme.radius),
-                border: Border.all(color: Colors.white.withValues(alpha: .25)),
-              ),
-              child: Icon(icon, color: Colors.white, size: 26),
-            ),
-          if (icon != null) const SizedBox(width: 14),
+          const BubbleWordmark(fontSize: 22),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                if (colorfulTitle)
-                  ColorfulTitle(text: title, fontSize: 22)
-                else
+                if (kicker != null)
                   Text(
-                    title,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
+                    kicker!.toUpperCase(),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
+                      letterSpacing: 1.3,
                     ),
                   ),
+                Text(
+                  title,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 4),
                   Text(
                     subtitle!,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: .92),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ],
               ],
             ),
           ),
-          if (trailing != null) ...[const SizedBox(width: 8), trailing!],
           for (final action in actions) ...[const SizedBox(width: 6), action],
         ],
       ),
@@ -304,40 +295,6 @@ class _BubbleLetter extends StatelessWidget {
       ],
     );
   }
-}
-
-/// Rounded pill used for the tagline under [BubbleWordmark], matching the
-/// colorful callout badge in IKeriKin's storybook branding art.
-class TaglinePill extends StatelessWidget {
-  const TaglinePill({super.key, required this.text, this.color});
-  final String text;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-    decoration: BoxDecoration(
-      color: color ?? AppTheme.brandPink,
-      borderRadius: BorderRadius.circular(999),
-      boxShadow: [
-        BoxShadow(
-          color: (color ?? AppTheme.brandPink).withValues(alpha: .35),
-          blurRadius: 14,
-          offset: const Offset(0, 6),
-          spreadRadius: -6,
-        ),
-      ],
-    ),
-    child: Text(
-      text,
-      textAlign: TextAlign.center,
-      style: const TextStyle(
-        color: Colors.white,
-        fontWeight: FontWeight.w800,
-        fontSize: 13,
-      ),
-    ),
-  );
 }
 
 /// Responsive centered content area with safe horizontal padding.
@@ -553,8 +510,8 @@ class SectionHeading extends StatelessWidget {
   }
 }
 
-/// Circular translucent icon button styled to sit on a [HeroBanner]
-/// gradient, matching the settings shortcut on the Home tab.
+/// Bordered icon button used in a [HeroBanner]'s action row, matching
+/// Kombai's `.route-action` shortcut buttons on their plain light bar.
 class MastheadAction extends StatelessWidget {
   const MastheadAction({
     super.key,
@@ -567,16 +524,22 @@ class MastheadAction extends StatelessWidget {
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) => IconButton(
-    onPressed: onPressed,
-    tooltip: tooltip,
-    style: IconButton.styleFrom(
-      backgroundColor: Colors.white.withValues(alpha: .18),
-      foregroundColor: Colors.white,
-      shape: const CircleBorder(),
-    ),
-    icon: Icon(icon),
-  );
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return IconButton(
+      onPressed: onPressed,
+      tooltip: tooltip,
+      style: IconButton.styleFrom(
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
+        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: .6)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radius),
+        ),
+      ),
+      icon: Icon(icon),
+    );
+  }
 }
 
 /// Progress indicator paired with a short explanation of what is happening.

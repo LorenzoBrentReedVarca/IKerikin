@@ -9,26 +9,32 @@ import '../widgets/common_widgets.dart';
 
 /// Shared visual frame for all authentication screens, styled after
 /// Kombai's "calm centered form" concept and tuned for phones and tablets
-/// (a single scaling column rather than a desktop split layout).
+/// (a single scaling column rather than a desktop split layout). Every
+/// auth screen keeps the same brand lockup — Kombai's design never swaps
+/// it for a back-button app bar — with the screen's own heading rendered
+/// inside the card.
 class AuthFrame extends StatelessWidget {
   const AuthFrame({
     super.key,
     required this.title,
-    required this.subtitle,
     required this.child,
-    this.showBackButton = false,
     this.eyebrow,
+    this.titleIcon,
     this.intro,
     this.footNote,
   });
+
+  /// Bold heading shown inside the card, e.g. "Welcome to IKeriKin".
   final String title;
-  final String subtitle;
   final Widget child;
-  final bool showBackButton;
 
   /// Small uppercase kicker shown above the card heading, e.g. "A calm
   /// place to begin".
   final String? eyebrow;
+
+  /// Optional icon shown in a circle beside the title (used by the email
+  /// verification screen).
+  final IconData? titleIcon;
 
   /// Short supporting line shown inside the card, above the form fields.
   final String? intro;
@@ -45,10 +51,6 @@ class AuthFrame extends StatelessWidget {
     final cardPadding = isTablet ? 32.0 : 22.0;
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: showBackButton
-          ? AppBar(backgroundColor: Colors.transparent, elevation: 0)
-          : null,
       body: Stack(
         children: [
           // Soft gradient wash behind the auth card gives depth without noise.
@@ -88,27 +90,9 @@ class AuthFrame extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     SizedBox(height: isTablet ? 52 : 36),
-                    Center(child: _AnimatedAuthLogo(size: isTablet ? 108 : 92)),
-                    const SizedBox(height: 22),
-                    if (showBackButton) ...[
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.displaySmall,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        subtitle,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                    ] else ...[
-                      Center(
-                        child: BubbleWordmark(fontSize: isTablet ? 46 : 40),
-                      ),
-                      const SizedBox(height: 14),
-                      Center(child: TaglinePill(text: subtitle)),
-                    ],
+                    Center(
+                      child: _AnimatedAuthLogo(size: isTablet ? 160 : 132),
+                    ),
                     const SizedBox(height: 20),
                     Center(
                       child: Container(
@@ -166,6 +150,37 @@ class AuthFrame extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 10),
                                 ],
+                                if (titleIcon != null)
+                                  Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 22,
+                                        backgroundColor:
+                                            scheme.primaryContainer,
+                                        child: Icon(
+                                          titleIcon,
+                                          color: scheme.onPrimaryContainer,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Text(
+                                          title,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.headlineSmall,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                else
+                                  Text(
+                                    title,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.headlineMedium,
+                                  ),
+                                const SizedBox(height: 10),
                                 if (intro != null) ...[
                                   Text(
                                     intro!,
@@ -318,7 +333,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final busy = ref.watch(authControllerProvider);
     return AuthFrame(
       title: 'Welcome to IKeriKin',
-      subtitle: 'I Care for Your Kin',
       eyebrow: 'A calm place to begin',
       intro: 'Sign in to continue learning with your child.',
       footNote: 'Made with care in the Philippines',
@@ -454,9 +468,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final busy = ref.watch(authControllerProvider);
     return AuthFrame(
       title: 'Create your account',
-      subtitle: 'Start personalized learning for your child.',
-      showBackButton: true,
       eyebrow: 'Parent account',
+      intro: 'Start personalized learning for your child.',
       footNote:
           'Your child’s learning space starts with one small, caring step.',
       child: Form(
@@ -581,10 +594,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) => AuthFrame(
     title: 'Reset your password',
-    subtitle: 'We will email a secure reset link.',
-    showBackButton: true,
-    eyebrow: 'Account recovery',
-    footNote: 'Password reset starts with your email address.',
+    intro: 'We will email a secure reset link.',
+    footNote: 'IKeriKin · Made with care in the Philippines',
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -635,28 +646,49 @@ class VerifyEmailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => AuthFrame(
     title: 'Check your inbox',
-    subtitle: 'A verification link was sent to $email.',
-    eyebrow: 'Almost there',
-    footNote: 'Made with care in the Philippines',
+    eyebrow: 'Email verification',
+    titleIcon: Icons.mark_email_read_rounded,
+    intro: 'A verification link was sent to $email.',
+    footNote: 'IKeriKin',
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Icon(
-          Icons.mark_email_read_rounded,
-          size: 72,
-          color: Theme.of(context).colorScheme.primary,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(AppTheme.radius),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.alternate_email_rounded,
+                size: 18,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  email,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
         const Text(
           'Open the link in the email to verify your address. You may then return to IKeriKin and sign in.',
-          textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 22),
-        FilledButton(
+        const SizedBox(height: 20),
+        FilledButton.icon(
           onPressed: () => context.go('/login'),
-          child: const Text('Continue to sign in'),
+          icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+          label: const Text('Continue to sign in'),
         ),
-        TextButton(
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
           onPressed: () async {
             try {
               await ref
@@ -672,7 +704,8 @@ class VerifyEmailScreen extends ConsumerWidget {
                 showMessage(context, error.toString(), error: true);
             }
           },
-          child: const Text('Resend email'),
+          icon: const Icon(Icons.refresh_rounded, size: 18),
+          label: const Text('Resend email'),
         ),
       ],
     ),

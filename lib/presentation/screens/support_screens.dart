@@ -63,9 +63,8 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                           physics: const AlwaysScrollableScrollPhysics(),
                           children: [
                             HeroBanner(
-                              icon: Icons.insights_rounded,
+                              kicker: 'Learning progress',
                               title: 'Progress',
-                              colorfulTitle: true,
                               subtitle:
                                   'A calm view of what ${child.name} has practiced and what comes next.',
                             ),
@@ -725,9 +724,8 @@ class SettingsScreen extends ConsumerWidget {
           child: ListView(
             children: [
               const HeroBanner(
-                icon: Icons.settings_outlined,
+                kicker: 'Preferences',
                 title: 'Settings & accessibility',
-                colorfulTitle: true,
                 subtitle: 'Tune how IKeriKin looks, sounds, and responds.',
               ),
               const SizedBox(height: 16),
@@ -984,9 +982,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
             data: (data) => ListView(
               children: [
                 const HeroBanner(
-                  icon: Icons.admin_panel_settings_rounded,
+                  kicker: 'Administration',
                   title: 'IKeriKin Administration',
-                  colorfulTitle: true,
                   subtitle: 'Operational metrics and record management.',
                 ),
                 const SizedBox(height: 16),

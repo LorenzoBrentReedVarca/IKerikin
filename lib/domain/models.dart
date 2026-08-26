@@ -718,6 +718,7 @@ class GeneratedVideoScene {
     required this.status,
     this.providerJobId,
     this.videoUrl,
+    this.narrationAudioUrl,
     this.errorMessage,
     required this.createdAt,
     required this.updatedAt,
@@ -732,6 +733,11 @@ class GeneratedVideoScene {
   final VideoGenerationStatus status;
   final String? providerJobId;
   final String? videoUrl;
+
+  /// Gemini-synthesized spoken narration for this scene, rendered once and
+  /// persisted server-side. Null when synthesis failed or hasn't completed
+  /// yet — playback falls back to on-device text-to-speech in that case.
+  final String? narrationAudioUrl;
   final String? errorMessage;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -749,6 +755,7 @@ class GeneratedVideoScene {
         ),
         providerJobId: json['generation_job_id'] as String?,
         videoUrl: json['video_url'] as String?,
+        narrationAudioUrl: json['narration_audio_url'] as String?,
         errorMessage: json['error_message'] as String?,
         createdAt: DateTime.parse(json['created_at'] as String),
         updatedAt: DateTime.parse(json['updated_at'] as String),

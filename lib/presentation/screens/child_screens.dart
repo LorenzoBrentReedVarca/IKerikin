@@ -55,9 +55,8 @@ class ChildProfileScreen extends ConsumerWidget {
               return ListView(
                 children: [
                   HeroBanner(
-                    icon: Icons.favorite_rounded,
+                    kicker: 'Child profile',
                     title: '${child.name}\'s profile',
-                    colorfulTitle: true,
                     subtitle:
                         'Everything that shapes lessons made for ${child.name}.',
                     actions: [
@@ -391,9 +390,8 @@ class ChildrenScreen extends ConsumerWidget {
             data: (items) => ListView(
               children: [
                 HeroBanner(
-                  icon: Icons.family_restroom_rounded,
+                  kicker: 'Your family',
                   title: 'Child profiles',
-                  colorfulTitle: true,
                   subtitle:
                       'Manage the learners using IKeriKin on this account.',
                   actions: [
@@ -642,11 +640,8 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
             child: ListView(
               children: [
                 HeroBanner(
-                  icon: isEdit
-                      ? Icons.edit_rounded
-                      : Icons.person_add_alt_1_rounded,
+                  kicker: 'Learner details',
                   title: isEdit ? 'Edit child profile' : 'Add child profile',
-                  colorfulTitle: true,
                   subtitle: isEdit
                       ? 'Keep ${widget.child!.name}\'s learning profile up to date.'
                       : 'Add the learner details used to personalize AI lessons.',

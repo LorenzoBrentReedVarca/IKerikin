@@ -4,9 +4,12 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
+  audioplayers_windows
   connectivity_plus
   file_selector_windows
   flutter_tts
+  media_kit_libs_windows_video
+  media_kit_video
   speech_to_text_windows
   url_launcher_windows
 )

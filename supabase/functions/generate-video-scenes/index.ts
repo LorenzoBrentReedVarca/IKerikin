@@ -65,6 +65,9 @@ class RunwayProvider implements VideoProvider {
 
   async createSceneTask(scene: Scene): Promise<{ providerJobId: string }> {
     // Child-safe prompt: never depict real people, on-screen text, or logos.
+    // Runway's text_to_video output is silent — narration audio is added
+    // client-side via TTS, not requested from Runway (a live test of the
+    // documented `audio: true` flag produced no audio track on this account).
     const promptText = [
       scene.visual_prompt,
       "Colorful, gentle, child-friendly educational cartoon animation style.",
@@ -112,6 +115,100 @@ class RunwayProvider implements VideoProvider {
       default:
         return { status: "generating" };
     }
+  }
+}
+
+/**
+ * Synthesizes spoken narration for a scene via Gemini's native TTS endpoint
+ * (not the OpenAI-compatible chat endpoint generate-lesson uses — TTS isn't
+ * exposed there). Reuses the same AI_API_KEY secret already configured for
+ * lesson text generation. Returns a playable WAV file, or null if the key
+ * isn't configured or the call fails — narration is best-effort, never
+ * blocks video rendering.
+ */
+async function synthesizeNarration(text: string): Promise<Uint8Array | null> {
+  const apiKey = Deno.env.get("AI_API_KEY");
+  if (!apiKey || !text.trim()) return null;
+  const model = Deno.env.get("GEMINI_TTS_MODEL") ?? "gemini-2.5-flash-preview-tts";
+  const voice = Deno.env.get("GEMINI_TTS_VOICE") ?? "Kore";
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: "POST",
+        headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: `Say in a cheerful, bouncy, sing-song voice for a young child: ${text}` }],
+          }],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
+          },
+        }),
+      },
+    );
+    if (!response.ok) {
+      console.error("Gemini TTS request failed", response.status, await response.text());
+      return null;
+    }
+    const body = await response.json();
+    const base64: string | undefined = body?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    if (!base64) return null;
+    const pcm = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    return pcmToWav(pcm, 24000, 1, 16);
+  } catch (error) {
+    console.error("Gemini TTS error", error);
+    return null;
+  }
+}
+
+/** Prepends a standard 44-byte WAV header to raw PCM samples. */
+function pcmToWav(pcm: Uint8Array, sampleRate: number, channels: number, bitDepth: number): Uint8Array {
+  const blockAlign = channels * (bitDepth / 8);
+  const byteRate = sampleRate * blockAlign;
+  const buffer = new ArrayBuffer(44 + pcm.length);
+  const view = new DataView(buffer);
+  const writeString = (offset: number, value: string) => {
+    for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i));
+  };
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + pcm.length, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, channels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitDepth, true);
+  writeString(36, "data");
+  view.setUint32(40, pcm.length, true);
+  new Uint8Array(buffer, 44).set(pcm);
+  return new Uint8Array(buffer);
+}
+
+/** Best-effort: render and persist a scene's narration, leaving the column
+ * null (silent fallback to on-device TTS client-side) on any failure. */
+async function persistNarration(
+  supabase: ReturnType<typeof supabaseClientFor>,
+  parentId: string,
+  lessonId: string,
+  sceneNumber: number,
+  narration: string,
+): Promise<string | null> {
+  const wav = await synthesizeNarration(narration);
+  if (!wav) return null;
+  try {
+    const path = `${parentId}/${lessonId}/scene-${sceneNumber}-narration.wav`;
+    const { error } = await supabase.storage
+      .from("lesson-videos")
+      .upload(path, wav, { contentType: "audio/wav", upsert: true });
+    if (error) return null;
+    return supabase.storage.from("lesson-videos").getPublicUrl(path).data.publicUrl;
+  } catch (_error) {
+    return null;
   }
 }
 
@@ -288,10 +385,17 @@ serve(async (request) => {
       for (const row of sceneRows) {
         const scene = scenes.find((s) => s.scene_number === row.scene_number)!;
         try {
-          const { providerJobId } = await provider.createSceneTask(scene);
+          const [{ providerJobId }, narrationAudioUrl] = await Promise.all([
+            provider.createSceneTask(scene),
+            persistNarration(supabase, childId, lessonId, scene.scene_number, scene.narration),
+          ]);
           await supabase
             .from("generated_video_scenes")
-            .update({ generation_status: "generating", generation_job_id: providerJobId })
+            .update({
+              generation_status: "generating",
+              generation_job_id: providerJobId,
+              narration_audio_url: narrationAudioUrl,
+            })
             .eq("id", row.id);
         } catch (error) {
           await supabase
@@ -343,12 +447,21 @@ serve(async (request) => {
             visual_prompt: "A colorful, friendly educational cartoon scene.",
             educational_objective: "",
           };
-          const { providerJobId } = await provider.createSceneTask(scene);
+          // Narration only needs (re)synthesizing if it never succeeded the
+          // first time — video-only failures shouldn't discard good audio.
+          const narrationPromise = row.narration_audio_url
+            ? Promise.resolve(row.narration_audio_url as string)
+            : persistNarration(supabase, row.child_id as string, row.lesson_id as string, scene.scene_number, scene.narration);
+          const [{ providerJobId }, narrationAudioUrl] = await Promise.all([
+            provider.createSceneTask(scene),
+            narrationPromise,
+          ]);
           await supabase
             .from("generated_video_scenes")
             .update({
               generation_status: "generating",
               generation_job_id: providerJobId,
+              narration_audio_url: narrationAudioUrl,
               error_message: null,
               video_url: null,
             })
