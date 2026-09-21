@@ -451,15 +451,39 @@ class LessonPlanItem {
   final LessonDifficulty difficulty;
   final String contentType;
 
-  factory LessonPlanItem.fromJson(Map<String, dynamic> json) =>
-      LessonPlanItem(
-        goal: json['goal'] as String? ?? '',
-        difficulty: LessonDifficulty.values.firstWhere(
-          (value) => value.name == json['difficulty'],
-          orElse: () => LessonDifficulty.easy,
-        ),
-        contentType: json['content_type'] as String? ?? 'Story',
-      );
+  /// Bounds Postgres enforces on `lesson_requests.goal`.
+  static const _minGoalLength = 5;
+  static const _maxGoalLength = 500;
+
+  /// Whether this item can actually be persisted. The planning prompt asks
+  /// for a one-sentence goal, but a model that returns an empty or stub goal
+  /// would violate the column's length check, so such items are dropped
+  /// rather than sent to the database.
+  bool get isUsable => goal.length >= _minGoalLength;
+
+  /// Parses one planned lesson, normalizing both CHECK-constrained columns.
+  ///
+  /// The prompt asks for an exact `content_type` and a bounded `goal`, but
+  /// nothing binds the model to either. An off-list value fails the insert
+  /// into `lesson_requests`, and both callers swallow that error — so an
+  /// unnormalized value shows up as the lesson shelf quietly not growing
+  /// rather than as a visible failure.
+  factory LessonPlanItem.fromJson(Map<String, dynamic> json) {
+    final goal = (json['goal'] as String? ?? '').trim();
+    final contentType = json['content_type'] as String? ?? '';
+    return LessonPlanItem(
+      goal: goal.length <= _maxGoalLength
+          ? goal
+          : '${goal.substring(0, _maxGoalLength - 1).trimRight()}…',
+      difficulty: LessonDifficulty.values.firstWhere(
+        (value) => value.name == json['difficulty'],
+        orElse: () => LessonDifficulty.easy,
+      ),
+      contentType: ProfileOptions.contentTypes.contains(contentType)
+          ? contentType
+          : 'Story',
+    );
+  }
 }
 
 /// A generated and persisted learning lesson.

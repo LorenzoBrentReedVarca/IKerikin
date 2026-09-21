@@ -5,6 +5,33 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// `lesson_requests` CHECK-constrains difficulty and content_type to these
+// exact sets and bounds goal length. The prompt below asks for valid values
+// but cannot bind the model to them, and an off-list value fails the insert
+// on the client — where both callers swallow the error, so it surfaces as
+// the lesson shelf quietly not growing. Normalize before returning.
+const DIFFICULTIES = ["easy", "medium", "challenging"];
+const CONTENT_TYPES = ["Story", "Educational Adventure", "Cartoon Lesson", "Interactive Lesson"];
+const MIN_GOAL_LENGTH = 5;
+const MAX_GOAL_LENGTH = 500;
+
+function normalizeLesson(raw: unknown) {
+  const item = (raw ?? {}) as Record<string, unknown>;
+  const goal = String(item.goal ?? "").trim();
+  // Too short to satisfy the column's length check — drop it rather than
+  // return a stub that fails the insert for the whole lesson.
+  if (goal.length < MIN_GOAL_LENGTH) return null;
+  const difficulty = String(item.difficulty ?? "");
+  const contentType = String(item.content_type ?? "");
+  return {
+    goal: goal.length <= MAX_GOAL_LENGTH
+      ? goal
+      : `${goal.slice(0, MAX_GOAL_LENGTH - 1).trimEnd()}…`,
+    difficulty: DIFFICULTIES.includes(difficulty) ? difficulty : "easy",
+    content_type: CONTENT_TYPES.includes(contentType) ? contentType : "Story",
+  };
+}
+
 serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
@@ -54,11 +81,14 @@ The "lessons" array above already has ${lessonCount} slots — fill in every one
     if (!aiResponse.ok) throw new Error(`AI provider error: ${aiResponse.status} ${await aiResponse.text()}`);
     const payload = await aiResponse.json();
     const content = JSON.parse(payload.choices[0].message.content);
-    const lessons = Array.isArray(content?.lessons) ? content.lessons.slice(0, lessonCount) : [];
+    const returned = Array.isArray(content?.lessons) ? content.lessons.slice(0, lessonCount) : [];
+    const lessons = returned.map(normalizeLesson).filter((item) => item !== null);
     if (lessons.length !== lessonCount) {
-      console.error(`Starter plan count mismatch: requested ${lessonCount}, model returned ${lessons.length}.`);
+      console.error(
+        `Lesson plan shortfall: requested ${lessonCount}, model returned ${returned.length}, ${lessons.length} usable after normalizing.`,
+      );
     }
-    if (lessons.length === 0) throw new Error("The AI did not return any starter lessons.");
+    if (lessons.length === 0) throw new Error("The AI did not return any usable starter lessons.");
     return new Response(JSON.stringify({ lessons }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });

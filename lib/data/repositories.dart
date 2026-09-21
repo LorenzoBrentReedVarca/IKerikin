@@ -239,6 +239,10 @@ class SupabaseAiLessonProvider implements AiLessonProvider {
           (item) =>
               LessonPlanItem.fromJson(Map<String, dynamic>.from(item as Map)),
         )
+        // A goal too short to satisfy the column's length check would fail
+        // the insert for the whole lesson, so drop it here and keep the
+        // usable siblings instead.
+        .where((item) => item.isUsable)
         .toList();
   }
 }
