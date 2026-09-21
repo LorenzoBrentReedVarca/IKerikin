@@ -193,10 +193,10 @@ class SupabaseChildRepository implements ChildRepository {
 abstract interface class AiLessonProvider {
   Future<LessonContent> generate(LessonRequest request, ChildProfile child);
 
-  /// Suggests a starter curriculum of lesson goals tailored to a child's
-  /// profile, so a fresh profile can be turned into a ready lesson shelf
-  /// automatically instead of starting empty.
-  Future<List<LessonPlanItem>> generatePlan(ChildProfile child);
+  /// Suggests [count] lesson goals tailored to a child's profile — a full
+  /// starter curriculum right after a profile is created, or just one for
+  /// the daily lesson refresh.
+  Future<List<LessonPlanItem>> generatePlan(ChildProfile child, {int count = 6});
 }
 
 /// Secure Supabase Edge Function AI provider.
@@ -222,10 +222,13 @@ class SupabaseAiLessonProvider implements AiLessonProvider {
   }
 
   @override
-  Future<List<LessonPlanItem>> generatePlan(ChildProfile child) async {
+  Future<List<LessonPlanItem>> generatePlan(
+    ChildProfile child, {
+    int count = 6,
+  }) async {
     final response = await _client.functions.invoke(
       AppConfig.aiPlanFunctionName,
-      body: {'child': child.toJson()},
+      body: {'child': child.toJson(), 'count': count},
     );
     if (response.status < 200 || response.status >= 300) {
       throw Exception('Lesson planning service returned status ${response.status}.');
@@ -388,12 +391,21 @@ abstract interface class LessonRepository {
   Future<List<Lesson>> getLessons(String childId);
   Future<Lesson> generate(LessonRequest request, ChildProfile child);
   Future<List<LessonPlanItem>> planStarterLessons(ChildProfile child);
+
+  /// Suggests a single fresh lesson goal tailored to the child's current
+  /// disabilities, challenges, and interests — used to grow the lesson
+  /// shelf by one lesson per day instead of only at profile creation.
+  Future<LessonPlanItem> planNextLesson(ChildProfile child);
   Future<void> recordCompletion(
     String lessonId,
     String childId,
     int score,
     int minutes,
   );
+
+  /// Synthesizes a natural-voice narration of a lesson's story text and
+  /// persists the resulting audio URL, so future reads don't re-synthesize.
+  Future<String> narrateStory(Lesson lesson, ChildProfile child);
 }
 
 /// Supabase lesson repository.
@@ -417,6 +429,13 @@ class SupabaseLessonRepository implements LessonRepository {
       _ai.generatePlan(child);
 
   @override
+  Future<LessonPlanItem> planNextLesson(ChildProfile child) async {
+    final plan = await _ai.generatePlan(child, count: 1);
+    if (plan.isEmpty) throw Exception('The AI did not suggest a lesson.');
+    return plan.first;
+  }
+
+  @override
   Future<Lesson> generate(LessonRequest request, ChildProfile child) async {
     await _client.from('lesson_requests').insert(request.toJson());
     final content = await _ai.generate(request, child);
@@ -430,6 +449,28 @@ class SupabaseLessonRepository implements LessonRepository {
     );
     await _client.from('lessons').insert(lesson.toJson());
     return lesson;
+  }
+
+  static const _narrationFunctionName = 'generate-story-narration';
+
+  @override
+  Future<String> narrateStory(Lesson lesson, ChildProfile child) async {
+    final response = await _client.functions.invoke(
+      _narrationFunctionName,
+      body: {
+        'lesson_id': lesson.id,
+        'child_id': child.id,
+        'story': lesson.content.story,
+      },
+    );
+    if (response.status < 200 || response.status >= 300) {
+      throw Exception('Voice synthesis service returned status ${response.status}.');
+    }
+    final data = Map<String, dynamic>.from(response.data as Map);
+    if (data['error'] is String) throw Exception(data['error']);
+    final url = data['story_narration_url'] as String?;
+    if (url == null) throw Exception('Voice synthesis did not return an audio URL.');
+    return url;
   }
 
   @override

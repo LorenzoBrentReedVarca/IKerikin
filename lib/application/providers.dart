@@ -113,6 +113,12 @@ final adminMetricsProvider = FutureProvider<AdminMetrics>(
 
 /// Executes authentication commands and exposes their busy state.
 class AuthController extends Notifier<bool> {
+  /// Persisted "Remember me" choice. When false (the default), [main] signs
+  /// the user back out at every launch even though Supabase already
+  /// restored a session from disk, so signing in is required every time
+  /// unless the user opted in on the login screen.
+  static const rememberMeKey = 'remember_me';
+
   @override
   bool build() => false;
 
@@ -126,17 +132,28 @@ class AuthController extends Notifier<bool> {
     }
   }
 
-  Future<void> signIn(String email, String password) => _run(
-    () async => ref.read(authRepositoryProvider).signIn(email, password),
-  );
+  Future<void> signIn(
+    String email,
+    String password, {
+    required bool rememberMe,
+  }) => _run(() async {
+    await ref
+        .read(sharedPreferencesProvider)
+        .setBool(rememberMeKey, rememberMe);
+    await ref.read(authRepositoryProvider).signIn(email, password);
+  });
 
   Future<void> register(String name, String email, String password) => _run(
     () async =>
         ref.read(authRepositoryProvider).register(name, email, password),
   );
 
-  Future<void> google() =>
-      _run(ref.read(authRepositoryProvider).signInWithGoogle);
+  Future<void> google({required bool rememberMe}) => _run(() async {
+    await ref
+        .read(sharedPreferencesProvider)
+        .setBool(rememberMeKey, rememberMe);
+    await ref.read(authRepositoryProvider).signInWithGoogle();
+  });
 
   Future<void> resetPassword(String email) =>
       _run(() => ref.read(authRepositoryProvider).sendPasswordReset(email));
@@ -144,7 +161,10 @@ class AuthController extends Notifier<bool> {
   Future<void> resendVerification(String email) =>
       _run(() => ref.read(authRepositoryProvider).resendVerification(email));
 
-  Future<void> signOut() => _run(ref.read(authRepositoryProvider).signOut);
+  Future<void> signOut() => _run(() async {
+    await ref.read(authRepositoryProvider).signOut();
+    await ref.read(sharedPreferencesProvider).remove(rememberMeKey);
+  });
 }
 
 /// Provides authentication command state.
@@ -418,6 +438,63 @@ final starterLessonsControllerProvider =
     NotifierProvider<StarterLessonsController, StarterLessonsProgress?>(
       StarterLessonsController.new,
     );
+
+/// Ensures every child gets one freshly generated lesson per calendar day,
+/// tailored to their current disabilities, challenges, and interests — so
+/// the lesson shelf keeps changing daily instead of going stale after the
+/// starter curriculum. [ensureToday] is safe to call on every Home screen
+/// build: it no-ops once today's lesson already exists for that child, or
+/// while one is already being generated.
+class DailyLessonController extends Notifier<bool> {
+  final _inFlight = <String>{};
+
+  static String _prefsKey(String childId) => 'daily_lesson_date_$childId';
+
+  @override
+  bool build() => false;
+
+  Future<void> ensureToday(ChildProfile child) async {
+    if (_inFlight.contains(child.id)) return;
+    final prefs = ref.read(sharedPreferencesProvider);
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    if (prefs.getString(_prefsKey(child.id)) == today) return;
+
+    _inFlight.add(child.id);
+    state = true;
+    try {
+      final goal = await ref
+          .read(lessonRepositoryProvider)
+          .planNextLesson(child);
+      final request = LessonRequest(
+        id: const Uuid().v4(),
+        childId: child.id,
+        goal: goal.goal,
+        difficulty: goal.difficulty,
+        language: child.preferredLanguage,
+        durationMinutes: 1,
+        additionalNotes: '',
+        createdAt: DateTime.now(),
+        videoDurationSeconds: 60,
+        contentType: goal.contentType,
+      );
+      await ref.read(lessonRepositoryProvider).generate(request, child);
+      await prefs.setString(_prefsKey(child.id), today);
+      ref.invalidate(lessonsProvider(child.id));
+    } catch (_) {
+      // Best-effort: if generation fails (offline, quota, etc.) the shelf
+      // simply doesn't grow today. Not persisting the date means it will
+      // retry the next time this child's Home screen is opened.
+    } finally {
+      _inFlight.remove(child.id);
+      state = false;
+    }
+  }
+}
+
+/// Provides the daily lesson refresh's busy state, keyed globally since at
+/// most one child's Home screen is visible at a time.
+final dailyLessonControllerProvider =
+    NotifierProvider<DailyLessonController, bool>(DailyLessonController.new);
 
 /// Coordinates animated lesson video generation and retry mutations.
 class VideoJobController extends Notifier<bool> {

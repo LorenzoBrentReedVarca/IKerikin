@@ -134,6 +134,15 @@ class HomeScreen extends ConsumerWidget {
               final child =
                   children.where((item) => item.id == selectedId).firstOrNull ??
                   children.first;
+              // Grows the lesson shelf by one AI-suggested lesson per
+              // calendar day, tailored to this child's disabilities,
+              // challenges, and interests. Cheap to call on every build:
+              // it no-ops once today's lesson already exists.
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                ref
+                    .read(dailyLessonControllerProvider.notifier)
+                    .ensureToday(child);
+              });
               final progress =
                   ref.watch(progressProvider(child.id)).value ??
                   const ProgressSummary(
@@ -2808,13 +2817,17 @@ const _kLessonModes = [
 class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
   _LessonMode _mode = _LessonMode.video;
   final FlutterTts _tts = FlutterTts();
+  final AudioPlayer _storyVoice = AudioPlayer();
   final Map<int, int> _answers = {};
   int _minutes = 0;
   late final Stopwatch _stopwatch = Stopwatch()..start();
+  late String? _storyNarrationUrl = widget.lesson.content.storyNarrationUrl;
+  bool _storyNarrationLoading = false;
 
   @override
   void dispose() {
     _tts.stop();
+    _storyVoice.dispose();
     _stopwatch.stop();
     super.dispose();
   }
@@ -2822,7 +2835,42 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
   void _setMode(_LessonMode mode) {
     if (mode == _mode) return;
     _tts.stop();
+    _storyVoice.stop();
     setState(() => _mode = mode);
+  }
+
+  Future<void> _listenToStory(LessonContent content, ChildProfile? child) async {
+    _tts.stop();
+    // Fire-and-forget with a timeout: on Flutter web, stopping a player that
+    // has never played anything can hang indefinitely instead of resolving.
+    unawaited(_storyVoice.stop().timeout(const Duration(seconds: 2), onTimeout: () {}));
+    if (_storyNarrationUrl != null) {
+      try {
+        await _storyVoice.play(UrlSource(_storyNarrationUrl!));
+        return;
+      } catch (_) {
+        // Fall through to (re)synthesize or on-device TTS below.
+      }
+    }
+    if (_storyNarrationLoading || child == null) {
+      if (child == null) _tts.speak(content.story);
+      return;
+    }
+    setState(() => _storyNarrationLoading = true);
+    try {
+      final url = await ref
+          .read(lessonRepositoryProvider)
+          .narrateStory(widget.lesson, child);
+      if (!mounted) return;
+      setState(() {
+        _storyNarrationUrl = url;
+        _storyNarrationLoading = false;
+      });
+      await _storyVoice.play(UrlSource(url));
+    } catch (_) {
+      if (mounted) setState(() => _storyNarrationLoading = false);
+      _tts.speak(content.story);
+    }
   }
 
   Future<void> _finish() async {
@@ -2868,7 +2916,8 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
         return _StoryReadingSurface(
           key: const ValueKey('story'),
           content: content,
-          onListen: () => _tts.speak(content.story),
+          isNarrating: _storyNarrationLoading,
+          onListen: () => _listenToStory(content, child),
           onStartLearning: () => _setMode(_LessonMode.video),
         );
       case _LessonMode.cards:
@@ -4998,10 +5047,12 @@ class _StoryReadingSurface extends StatelessWidget {
     required this.content,
     required this.onListen,
     required this.onStartLearning,
+    this.isNarrating = false,
   });
   final LessonContent content;
   final VoidCallback onListen;
   final VoidCallback onStartLearning;
+  final bool isNarrating;
 
   static const _prompts = [
     ('Look at the words.', 'Take a moment before moving on.'),
@@ -5047,9 +5098,15 @@ class _StoryReadingSurface extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       IconButton.filledTonal(
-                        onPressed: onListen,
+                        onPressed: isNarrating ? null : onListen,
                         tooltip: 'Listen to the story',
-                        icon: const Icon(Icons.volume_up_rounded),
+                        icon: isNarrating
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.volume_up_rounded),
                       ),
                     ],
                   ),
@@ -5597,7 +5654,9 @@ class _VideoScenePlayerState extends ConsumerState<_VideoScenePlayer> {
 
   Future<void> _speakScene(GeneratedVideoScene scene) async {
     _tts.stop();
-    await _voice.stop();
+    // Fire-and-forget with a timeout: on Flutter web, stopping a player that
+    // has never played anything can hang indefinitely instead of resolving.
+    unawaited(_voice.stop().timeout(const Duration(seconds: 2), onTimeout: () {}));
     final narrationAudioUrl = scene.narrationAudioUrl;
     if (narrationAudioUrl != null) {
       try {

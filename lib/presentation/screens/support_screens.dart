@@ -858,6 +858,23 @@ class SettingsScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 18),
+              const SectionHeading(
+                title: 'Help',
+                subtitle: 'Get familiar with how IKeriKin works',
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.school_rounded),
+                  title: const Text('App tutorial'),
+                  subtitle: const Text(
+                    'Replay the narrated walkthrough of IKeriKin',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push('/tutorial'),
+                ),
+              ),
               const SizedBox(height: 22),
               OutlinedButton.icon(
                 onPressed: () async {

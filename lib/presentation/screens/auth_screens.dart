@@ -301,6 +301,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _obscure = true;
+  bool _rememberMe = false;
 
   @override
   void dispose() {
@@ -314,7 +315,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await ref
           .read(authControllerProvider.notifier)
-          .signIn(_email.text, _password.text);
+          .signIn(_email.text, _password.text, rememberMe: _rememberMe);
       if (mounted) context.go('/home');
     } on AuthException catch (error) {
       if (!mounted) return;
@@ -376,12 +377,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   : 'Password must have at least 6 characters',
               onFieldSubmitted: (_) => _signIn(),
             ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: busy ? null : () => context.push('/forgot-password'),
-                child: const Text('Forgot password?'),
-              ),
+            Row(
+              children: [
+                Checkbox(
+                  value: _rememberMe,
+                  onChanged: busy
+                      ? null
+                      : (value) =>
+                            setState(() => _rememberMe = value ?? false),
+                ),
+                GestureDetector(
+                  onTap: busy
+                      ? null
+                      : () => setState(() => _rememberMe = !_rememberMe),
+                  child: const Text('Remember me'),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: busy
+                      ? null
+                      : () => context.push('/forgot-password'),
+                  child: const Text('Forgot password?'),
+                ),
+              ],
             ),
             FilledButton(
               onPressed: busy ? null : _signIn,
@@ -420,7 +438,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       try {
                         await ref
                             .read(authControllerProvider.notifier)
-                            .google();
+                            .google(rememberMe: _rememberMe);
                       } catch (error) {
                         if (context.mounted)
                           showMessage(context, error.toString(), error: true);

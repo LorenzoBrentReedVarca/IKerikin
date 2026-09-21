@@ -778,6 +778,7 @@ class _ChildFormScreenState extends ConsumerState<ChildFormScreen> {
                   subtitle:
                       'Select all that apply. This helps adapt content respectfully.',
                   options: ProfileOptions.disabilities,
+                  descriptions: ProfileOptions.disabilityDescriptions,
                   selected: _disabilities,
                   onChanged: (value) => setState(() => _disabilities = value),
                 ),
@@ -912,12 +913,18 @@ class _ChoiceSection extends StatelessWidget {
     required this.options,
     required this.selected,
     required this.onChanged,
+    this.descriptions,
   });
   final String title;
   final String? subtitle;
   final List<String> options;
   final Set<String> selected;
   final ValueChanged<Set<String>> onChanged;
+
+  /// When given, each option renders as a described card with a plain-
+  /// language explanation instead of a compact chip, so a parent can see
+  /// what a term means before choosing it.
+  final Map<String, String>? descriptions;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -932,26 +939,95 @@ class _ChoiceSection extends StatelessWidget {
             child: Text(subtitle!),
           ),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: options
-              .map(
-                (option) => FilterChip(
-                  label: Text(option),
-                  selected: selected.contains(option),
-                  onSelected: (enabled) {
-                    final updated = {...selected};
-                    enabled ? updated.add(option) : updated.remove(option);
-                    onChanged(updated);
-                  },
-                ),
-              )
-              .toList(),
-        ),
+        if (descriptions == null)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: options
+                .map(
+                  (option) => FilterChip(
+                    label: Text(option),
+                    selected: selected.contains(option),
+                    onSelected: (enabled) {
+                      final updated = {...selected};
+                      enabled ? updated.add(option) : updated.remove(option);
+                      onChanged(updated);
+                    },
+                  ),
+                )
+                .toList(),
+          )
+        else
+          Column(
+            children: options
+                .map(
+                  (option) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _DescribedChoiceTile(
+                      label: option,
+                      description: descriptions![option] ?? '',
+                      selected: selected.contains(option),
+                      onChanged: (enabled) {
+                        final updated = {...selected};
+                        enabled
+                            ? updated.add(option)
+                            : updated.remove(option);
+                        onChanged(updated);
+                      },
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
       ],
     ),
   );
+}
+
+/// A selectable card pairing a term with a short, plain-language
+/// explanation — used for the disability selector so a parent can see what
+/// each option means before choosing it, rather than picking a bare label.
+class _DescribedChoiceTile extends StatelessWidget {
+  const _DescribedChoiceTile({
+    required this.label,
+    required this.description,
+    required this.selected,
+    required this.onChanged,
+  });
+  final String label;
+  final String description;
+  final bool selected;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: selected
+            ? AppTheme.brandViolet.withValues(alpha: .08)
+            : scheme.surfaceContainerHighest.withValues(alpha: .5),
+        borderRadius: BorderRadius.circular(AppTheme.radius),
+        border: Border.all(
+          color: selected ? AppTheme.brandViolet : scheme.outlineVariant,
+          width: selected ? 2 : 1,
+        ),
+      ),
+      child: CheckboxListTile(
+        value: selected,
+        onChanged: (value) => onChanged(value ?? false),
+        title: Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        subtitle: description.isEmpty ? null : Text(description),
+        controlAffinity: ListTileControlAffinity.leading,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radius),
+        ),
+      ),
+    );
+  }
 }
 
 /// Shown right after a new child profile is created while the AI builds a

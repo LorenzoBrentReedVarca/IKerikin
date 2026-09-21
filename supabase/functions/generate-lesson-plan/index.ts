@@ -12,9 +12,12 @@ serve(async (request) => {
     const endpoint = Deno.env.get("AI_API_URL") ?? "https://api.openai.com/v1/chat/completions";
     const model = Deno.env.get("AI_MODEL") ?? "gpt-4o-mini";
     if (!apiKey) throw new Error("AI_API_KEY is not configured in Supabase Edge Function secrets.");
-    const { child } = await request.json();
+    const { child, count } = await request.json();
 
-    const lessonCount = 6;
+    const requested = Number(count);
+    const lessonCount = Number.isFinite(requested)
+      ? Math.min(6, Math.max(1, Math.round(requested)))
+      : 6;
 
     // Spelling out one placeholder per required lesson (rather than a single
     // example) is what actually gets the count honored by the model instead
@@ -24,9 +27,21 @@ serve(async (request) => {
       () => `{"goal":"","difficulty":"easy","content_type":"Story"}`,
     ).join(",");
 
-    const prompt = `You are building a brand-new child's very first learning shelf. This family cannot afford a special education school, so this starter curriculum may be the only structured, personalized learning material this child gets — make it genuinely useful.
+    // `count: 1` is the daily-refresh call (see the app's DailyLessonController) —
+    // the child already has an ongoing shelf, so the framing and "vary against
+    // each other" instructions below need to differ from the brand-new-profile
+    // starter curriculum, even though both share this same endpoint and shape.
+    const isDailyRefresh = lessonCount === 1;
+    const intro = isDailyRefresh
+      ? "You are choosing today's new lesson for a child who already has an ongoing learning shelf."
+      : "You are building a brand-new child's very first learning shelf. This family cannot afford a special education school, so this starter curriculum may be the only structured, personalized learning material this child gets — make it genuinely useful.";
+    const varietyNote = isDailyRefresh
+      ? 'Pick a goal that likely has not been covered by this child\'s existing lessons yet, so each day feels new.'
+      : `Vary the ${lessonCount} goals so no two teach the same skill, and vary "difficulty" and "content_type" across them so the shelf feels varied, not repetitive.`;
+
+    const prompt = `${intro}
 Child profile: ${JSON.stringify(child)}
-Suggest exactly ${lessonCount} distinct, practical, confidence-building lesson goals for this child to learn first, based on their age, disabilities, challenges, and interests. Favor everyday living skills, communication, social skills, safety, and gentle early academics. Never diagnose, medicalize, or reference the disability directly in the goal text — write each goal the warm, plain way a parent would describe it (e.g. "Learn how to wash hands before eating", "Learn to say please and thank you", "Learn to recognize feelings like happy and sad"). Weave in the child's interests where it fits naturally (e.g. build the goal or its story around their favorite animal, character, or hobby) to keep it engaging. Vary the ${lessonCount} goals so no two teach the same skill, and vary "difficulty" and "content_type" across them so the shelf feels varied, not repetitive.
+Suggest exactly ${lessonCount} distinct, practical, confidence-building lesson goal${lessonCount === 1 ? "" : "s"} for this child to learn ${isDailyRefresh ? "next" : "first"}, based on their age, disabilities, challenges, and interests. Favor everyday living skills, communication, social skills, safety, and gentle early academics. Never diagnose, medicalize, or reference the disability directly in the goal text — write each goal the warm, plain way a parent would describe it (e.g. "Learn how to wash hands before eating", "Learn to say please and thank you", "Learn to recognize feelings like happy and sad"). Weave in the child's interests where it fits naturally (e.g. build the goal or its story around their favorite animal, character, or hobby) to keep it engaging. ${varietyNote}
 Return JSON only with this exact shape:
 {"lessons":[${lessonStubs}]}
 The "lessons" array above already has ${lessonCount} slots — fill in every one of them; do not merge lessons together or return fewer than ${lessonCount} entries. "difficulty" must be exactly one of "easy", "medium", "challenging" (default to "easy" for younger or more challenged learners). "content_type" must be exactly one of "Story", "Educational Adventure", "Cartoon Lesson", "Interactive Lesson". Each "goal" must be a short, specific, one-sentence learning goal in the requested language.`;

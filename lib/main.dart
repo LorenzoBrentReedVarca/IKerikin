@@ -16,6 +16,20 @@ Future<void> main() async {
   VideoPlayerMediaKit.ensureInitialized(windows: true, linux: true);
   await AppConfig.initialize();
   final preferences = await SharedPreferences.getInstance();
+  // Supabase persists sessions to disk by default, so it auto-restores one
+  // here on every launch. IKeriKin only wants that when the user opted in
+  // via "Remember me" at login — otherwise sign back out so /login is
+  // required again, even though a valid session was just recovered above.
+  final rememberMe =
+      preferences.getBool(AuthController.rememberMeKey) ?? false;
+  if (!rememberMe && AppConfig.supabase.auth.currentSession != null) {
+    try {
+      await AppConfig.supabase.auth.signOut();
+    } catch (_) {
+      // Local session state is cleared synchronously before the network
+      // call inside signOut(); an offline failure here is safe to ignore.
+    }
+  }
   runApp(
     ProviderScope(
       overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],

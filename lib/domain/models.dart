@@ -284,6 +284,7 @@ class LessonContent {
     required this.parentTips,
     this.objectives = const [],
     this.videoScript = const [],
+    this.storyNarrationUrl,
   });
 
   final String title;
@@ -301,6 +302,10 @@ class LessonContent {
 
   /// Structured animated video script generated alongside the lesson.
   final List<VideoScene> videoScript;
+
+  /// Cached URL of a pre-rendered natural-voice narration of [story], if one
+  /// has been generated. Falls back to on-device TTS when null.
+  final String? storyNarrationUrl;
 
   factory LessonContent.fromJson(Map<String, dynamic> json) => LessonContent(
     title: json['title'] as String? ?? 'Personalized Lesson',
@@ -337,6 +342,22 @@ class LessonContent {
           (item) => VideoScene.fromJson(Map<String, dynamic>.from(item as Map)),
         )
         .toList(),
+    storyNarrationUrl: json['story_narration_url'] as String?,
+  );
+
+  LessonContent copyWith({String? storyNarrationUrl}) => LessonContent(
+    title: title,
+    summary: summary,
+    story: story,
+    flashcards: flashcards,
+    quiz: quiz,
+    memoryGame: memoryGame,
+    matchingActivity: matchingActivity,
+    dailyActivity: dailyActivity,
+    parentTips: parentTips,
+    objectives: objectives,
+    videoScript: videoScript,
+    storyNarrationUrl: storyNarrationUrl ?? this.storyNarrationUrl,
   );
 
   Map<String, dynamic> toJson() => {
@@ -351,6 +372,7 @@ class LessonContent {
     'parent_tips': parentTips,
     'objectives': objectives,
     'video_script': videoScript.map((item) => item.toJson()).toList(),
+    if (storyNarrationUrl != null) 'story_narration_url': storyNarrationUrl,
   };
 }
 
@@ -637,6 +659,45 @@ abstract final class ProfileOptions {
     'Hearing Impairment',
     'Other',
   ];
+
+  /// Short, plain-language explanation shown beside each option in
+  /// [disabilities] so a parent can recognize what they're selecting
+  /// without needing outside research.
+  static const disabilityDescriptions = <String, String>{
+    'Autism':
+        'Differences in communication, social interaction, and sensory '
+        'processing. Often helped by clear routines and visual cues.',
+    'ADHD':
+        'Difficulty with attention, impulse control, or activity level '
+        'that can make sitting still or following routines harder.',
+    'Down Syndrome':
+        'A genetic condition that can affect physical development and '
+        'learning pace, often helped by repetition and visual supports.',
+    'Dyslexia':
+        'A learning difference that makes reading, spelling, and word '
+        'recognition harder, even with typical intelligence.',
+    'Speech Delay':
+        'Slower development of spoken language compared to other '
+        'children the same age.',
+    'Learning Disability':
+        'General difficulty processing information in ways that affect '
+        'reading, writing, or math.',
+    'Developmental Delay':
+        'Reaching motor, language, or social milestones later than '
+        'expected for their age.',
+    'Cerebral Palsy':
+        'A condition affecting muscle control and movement, caused by '
+        'differences in brain development.',
+    'Visual Impairment':
+        'Reduced vision, ranging from low vision to blindness, that '
+        'affects how they take in visual information.',
+    'Hearing Impairment':
+        'Partial or total hearing loss that can affect spoken language '
+        'development and communication.',
+    'Other':
+        'Not listed above? Choose this — lessons still adapt to whatever '
+        'you describe for your child.',
+  };
   static const challenges = [
     'Reading',
     'Writing',
