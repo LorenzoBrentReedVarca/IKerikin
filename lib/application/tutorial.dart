@@ -81,11 +81,21 @@ class TutorialController extends Notifier<TutorialState> {
     await ref.read(sharedPreferencesProvider).setBool(seenKey(userId), true);
   }
 
-  /// Whether this account still needs the first-run tour on this device.
-  bool get isUnseen {
+  /// Starts the tour if this account has not seen it on this device, and
+  /// reports whether the decision could actually be made.
+  ///
+  /// Returns false while the signed-in user is still unknown. The auth stream
+  /// is an async generator and the router lets the shell mount while it is
+  /// still loading, so a single check at mount can land before the user
+  /// arrives — and silently skip the first-run tour for good, because the
+  /// shell only mounts once. The caller retries on this returning false.
+  bool startIfUnseen() {
     final userId = ref.read(authStateProvider).value?.id;
     if (userId == null) return false;
-    return ref.read(sharedPreferencesProvider).getBool(seenKey(userId)) != true;
+    if (ref.read(sharedPreferencesProvider).getBool(seenKey(userId)) != true) {
+      start();
+    }
+    return true;
   }
 }
 

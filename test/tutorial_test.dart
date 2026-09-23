@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ikerikin/application/providers.dart';
@@ -145,13 +147,74 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       final tour = container.read(tutorialControllerProvider.notifier);
 
-      expect(tour.isUnseen, isTrue);
+      expect(prefs.getBool(TutorialController.seenKey('user-1')), isNull);
       tour.start();
       await tour.finish();
 
       expect(container.read(tutorialControllerProvider).active, isFalse);
       expect(prefs.getBool(TutorialController.seenKey('user-1')), isTrue);
-      expect(tour.isUnseen, isFalse);
+
+      // A later launch must not offer it again.
+      expect(tour.startIfUnseen(), isTrue);
+      expect(container.read(tutorialControllerProvider).active, isFalse);
+    });
+
+    test('defers the first-run decision until the user is known', () async {
+      // The router lets the shell mount while auth is still loading, so the
+      // check can run before the signed-in user arrives. It must report that
+      // it could not decide rather than quietly declining to start, or the
+      // tour is skipped for good — the shell mounts only once per launch.
+      final auth = StreamController<AppUser?>();
+      addTearDown(auth.close);
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          authStateProvider.overrideWith((ref) => auth.stream),
+        ],
+      );
+      addTearDown(container.dispose);
+      final sub = container.listen(authStateProvider, (_, _) {});
+      addTearDown(sub.close);
+      final tour = container.read(tutorialControllerProvider.notifier);
+
+      expect(
+        tour.startIfUnseen(),
+        isFalse,
+        reason: 'the user is not known yet, so nothing can be decided',
+      );
+      expect(container.read(tutorialControllerProvider).active, isFalse);
+
+      auth.add(const AppUser(
+        id: 'user-1',
+        email: 'parent@example.com',
+        displayName: 'Parent',
+        role: UserRole.parent,
+      ));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(
+        tour.startIfUnseen(),
+        isTrue,
+        reason: 'the user is known now, so the check can settle',
+      );
+      expect(
+        container.read(tutorialControllerProvider).active,
+        isTrue,
+        reason: 'a first-run account should get the tour once auth resolves',
+      );
+    });
+
+    test('does not restart the tour for an account that has seen it', () async {
+      await prefs.setBool(TutorialController.seenKey('user-1'), true);
+      final container = _container(prefs);
+      addTearDown(container.dispose);
+      final sub = container.listen(authStateProvider, (_, _) {});
+      addTearDown(sub.close);
+      await Future<void>.delayed(Duration.zero);
+
+      final tour = container.read(tutorialControllerProvider.notifier);
+      expect(tour.startIfUnseen(), isTrue, reason: 'the user is known');
+      expect(container.read(tutorialControllerProvider).active, isFalse);
     });
 
     test('registers one stable key per target id', () {

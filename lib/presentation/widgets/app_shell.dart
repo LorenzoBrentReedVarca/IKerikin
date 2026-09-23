@@ -81,16 +81,32 @@ class AppShell extends ConsumerStatefulWidget {
 }
 
 class _AppShellState extends ConsumerState<AppShell> {
+  /// Whether the first-run check has been settled, so it runs at most once.
+  bool _tourChecked = false;
+
   @override
   void initState() {
     super.initState();
     // First run on this device for this account: start the guided tour once
     // the shell has laid out, so the coach marks have real widgets to measure
     // against. Replays are started from Settings instead.
+    _scheduleTourCheck();
+  }
+
+  /// Settles the first-run check after the current frame, retrying later if
+  /// the signed-in user is not known yet.
+  ///
+  /// The router lets this shell mount while auth is still loading, so the
+  /// check at mount can run before the user arrives. Without the retry below
+  /// that single miss would skip the tour permanently, since the shell mounts
+  /// only once per launch.
+  void _scheduleTourCheck() {
+    if (_tourChecked) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final tour = ref.read(tutorialControllerProvider.notifier);
-      if (tour.isUnseen) tour.start();
+      if (!mounted || _tourChecked) return;
+      _tourChecked = ref
+          .read(tutorialControllerProvider.notifier)
+          .startIfUnseen();
     });
   }
 
@@ -115,6 +131,11 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    // Retry the first-run check when the signed-in user finally arrives, for
+    // the launches where auth resolved after this shell was already mounted.
+    ref.listen(authStateProvider, (_, next) {
+      if (next.value != null) _scheduleTourCheck();
+    });
     final largeButtons = ref.watch(accessibilityProvider).largeButtons;
     final touring = ref.watch(
       tutorialControllerProvider.select((state) => state.active),

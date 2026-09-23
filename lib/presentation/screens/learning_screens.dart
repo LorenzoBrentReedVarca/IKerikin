@@ -3086,7 +3086,6 @@ class _ModeTabButton extends StatelessWidget {
 /// switcher a consistent frame (border + soft shadow) to animate between.
 class _GentlePathPanel extends StatelessWidget {
   const _GentlePathPanel({
-    super.key,
     required this.child,
     this.padding = const EdgeInsets.all(20),
   });
@@ -3320,9 +3319,8 @@ class _PathRow extends StatelessWidget {
 /// The soft "pause when your child notices a feeling" reminder bar shown
 /// under the main practice area on every lesson mode.
 class _CaregiverCue extends StatelessWidget {
-  const _CaregiverCue(this.text, {this.icon = Icons.favorite_rounded});
+  const _CaregiverCue(this.text);
   final String text;
-  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -3337,7 +3335,11 @@ class _CaregiverCue extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppTheme.brandViolet, size: 20),
+          const Icon(
+            Icons.favorite_rounded,
+            color: AppTheme.brandViolet,
+            size: 20,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
