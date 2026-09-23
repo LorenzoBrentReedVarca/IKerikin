@@ -13,7 +13,8 @@
 /// Options:
 ///   --url         Supabase project URL   (default: SUPABASE_URL env, else the
 ///                                         project baked into app_config.dart)
-///   --anon-key    Supabase anon key      (default: SUPABASE_ANON_KEY env)
+///   --anon-key    Supabase anon key      (default: SUPABASE_ANON_KEY env, else
+///                                         the app's own publishable key)
 ///   --email       Account to sign in as  (default: SUPABASE_EMAIL env)
 ///   --password    That account's password(default: SUPABASE_PASSWORD env)
 ///   --only        Comma-separated slugs to render instead of all
@@ -32,6 +33,13 @@ import 'package:http/http.dart' as http;
 import 'package:ikerikin/application/tutorial_script.dart';
 
 const _defaultUrl = 'https://pnienrjbdopfkedfeuhn.supabase.co';
+
+/// Same publishable anon key the app ships with (see app_config.dart).
+/// Safe to keep here: Postgres RLS is the real access boundary, and this
+/// key alone grants nothing — the sign-in below is what authorizes the
+/// upload. Defaulting it keeps the usage line down to email and password.
+const _defaultAnonKey =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBuaWVucmpiZG9wZmtlZGZldWhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5OTE0ODcsImV4cCI6MjEwMDU2NzQ4N30.LRJga1y-mBut9QtVmUhIR4RZv5ikB8tqN7x5m3Nf2_4';
 const _functionName = 'generate-tutorial-narration';
 
 Future<void> main(List<String> args) async {
@@ -39,7 +47,8 @@ Future<void> main(List<String> args) async {
 
   final url = (options['url'] ?? _env('SUPABASE_URL') ?? _defaultUrl)
       .replaceAll(RegExp(r'/+$'), '');
-  final anonKey = options['anon-key'] ?? _env('SUPABASE_ANON_KEY');
+  final anonKey =
+      options['anon-key'] ?? _env('SUPABASE_ANON_KEY') ?? _defaultAnonKey;
   final email = options['email'] ?? _env('SUPABASE_EMAIL');
   final password = options['password'] ?? _env('SUPABASE_PASSWORD');
   final dryRun = options.containsKey('dry-run');
@@ -73,9 +82,10 @@ Future<void> main(List<String> args) async {
     return;
   }
 
-  if (anonKey == null || email == null || password == null) {
-    _fail('Missing credentials. Supply --anon-key, --email and --password '
-        '(or set SUPABASE_ANON_KEY, SUPABASE_EMAIL, SUPABASE_PASSWORD).');
+  if (email == null || password == null) {
+    _fail('Missing sign-in details. Supply --email and --password '
+        '(or set SUPABASE_EMAIL and SUPABASE_PASSWORD). Any account that can '
+        'sign in to the app works.');
   }
 
   final client = http.Client();
