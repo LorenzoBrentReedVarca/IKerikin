@@ -5,7 +5,9 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../application/providers.dart';
+import '../../application/tutorial.dart';
 import '../../core/theme/app_theme.dart';
+import 'coach_mark.dart';
 import 'common_widgets.dart';
 
 /// A primary application destination rendered in the bottom bar.
@@ -15,20 +17,27 @@ class _Destination {
     required this.selectedIcon,
     required this.label,
     required this.tooltip,
+    required this.tourId,
   });
 
   final IconData icon;
   final IconData selectedIcon;
   final String label;
   final String tooltip;
+
+  /// Id the guided tour spotlights this stop by.
+  final String tourId;
 }
 
 /// Navigation shell shared by primary application destinations, styled after
 /// Kombai's wooden dock: a solid warm plank bar carrying five always-labeled
 /// stops, with the active stop lit by a violet pill.
-class AppShell extends ConsumerWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.navigationShell});
   final StatefulNavigationShell navigationShell;
+
+  @override
+  ConsumerState<AppShell> createState() => _AppShellState();
 
   static const _destinations = [
     _Destination(
@@ -36,59 +45,98 @@ class AppShell extends ConsumerWidget {
       selectedIcon: Icons.home_rounded,
       label: 'Home',
       tooltip: 'Home dashboard',
+      tourId: 'nav-home',
     ),
     _Destination(
       icon: Icons.menu_book_outlined,
       selectedIcon: Icons.menu_book_rounded,
       label: 'Lessons',
       tooltip: 'Browse the lesson library',
+      tourId: 'nav-lessons',
     ),
     _Destination(
       icon: Icons.auto_fix_high_outlined,
       selectedIcon: Icons.auto_fix_high_rounded,
       label: 'Create',
       tooltip: 'Create an AI lesson',
+      tourId: 'nav-create',
     ),
     _Destination(
       icon: Icons.insights_outlined,
       selectedIcon: Icons.insights_rounded,
       label: 'Progress',
       tooltip: 'View learning progress',
+      tourId: 'nav-progress',
     ),
     _Destination(
       icon: Icons.person_outline_rounded,
       selectedIcon: Icons.person_rounded,
       label: 'Profile',
       tooltip: 'Child profile and settings',
+      tourId: 'nav-profile',
     ),
   ];
 
   static final FlutterTts _tts = FlutterTts();
+}
 
-  void _go(BuildContext context, WidgetRef ref, int index) {
+class _AppShellState extends ConsumerState<AppShell> {
+  @override
+  void initState() {
+    super.initState();
+    // First run on this device for this account: start the guided tour once
+    // the shell has laid out, so the coach marks have real widgets to measure
+    // against. Replays are started from Settings instead.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final tour = ref.read(tutorialControllerProvider.notifier);
+      if (tour.isUnseen) tour.start();
+    });
+  }
+
+  void _go(int index) {
     if (!prefersReducedMotion(context)) HapticFeedback.selectionClick();
-    if (index != navigationShell.currentIndex &&
+    if (index != widget.navigationShell.currentIndex &&
         ref.read(accessibilityProvider).voiceNavigation) {
-      _tts.speak(_destinations[index].label);
+      AppShell._tts.speak(AppShell._destinations[index].label);
     }
-    navigationShell.goBranch(
+    widget.navigationShell.goBranch(
       index,
-      initialLocation: index == navigationShell.currentIndex,
+      initialLocation: index == widget.navigationShell.currentIndex,
     );
   }
 
+  /// Switches tabs on the tour's behalf, without the haptics and spoken label
+  /// a deliberate tap gets — the parent did not press anything here.
+  void _goForTour(int index) {
+    if (index == widget.navigationShell.currentIndex) return;
+    widget.navigationShell.goBranch(index);
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final largeButtons = ref.watch(accessibilityProvider).largeButtons;
-    return Scaffold(
-      body: navigationShell,
+    final touring = ref.watch(
+      tutorialControllerProvider.select((state) => state.active),
+    );
+    final scaffold = Scaffold(
+      body: widget.navigationShell,
       bottomNavigationBar: _SignpostNavBar(
         key: const ValueKey('primary-navigation'),
-        currentIndex: navigationShell.currentIndex,
-        destinations: _destinations,
+        currentIndex: widget.navigationShell.currentIndex,
+        destinations: AppShell._destinations,
         large: largeButtons,
-        onSelected: (index) => _go(context, ref, index),
+        onSelected: _go,
       ),
+    );
+    if (!touring) return scaffold;
+    // Stacked over the whole Scaffold rather than inside its body, so the tour
+    // can spotlight the bottom navigation as readily as anything above it.
+    return Stack(
+      children: [
+        scaffold,
+        Positioned.fill(child: CoachMarkOverlay(onRequestBranch: _goForTour)),
+      ],
     );
   }
 }
@@ -136,11 +184,14 @@ class _SignpostNavBar extends StatelessWidget {
             children: [
               for (final (index, destination) in destinations.indexed)
                 Expanded(
-                  child: _DockItem(
-                    key: ValueKey(destination.label),
-                    destination: destination,
-                    selected: index == currentIndex,
-                    onTap: () => onSelected(index),
+                  child: CoachMarkTarget(
+                    id: destination.tourId,
+                    child: _DockItem(
+                      key: ValueKey(destination.label),
+                      destination: destination,
+                      selected: index == currentIndex,
+                      onTap: () => onSelected(index),
+                    ),
                   ),
                 ),
             ],

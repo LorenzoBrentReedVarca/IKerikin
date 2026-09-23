@@ -4,6 +4,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../application/providers.dart';
+import '../../application/tutorial.dart';
 import '../../core/accessibility/accessibility_settings.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/models.dart';
@@ -869,10 +870,16 @@ class SettingsScreen extends ConsumerWidget {
                   leading: const Icon(Icons.school_rounded),
                   title: const Text('App tutorial'),
                   subtitle: const Text(
-                    'Replay the narrated walkthrough of IKeriKin',
+                    'Replay the guided walkthrough of IKeriKin',
                   ),
                   trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.push('/tutorial'),
+                  // The tour runs over the real app, so leave Settings for
+                  // Home first — the coach marks have nothing to point at
+                  // from here.
+                  onTap: () {
+                    ref.read(tutorialControllerProvider.notifier).start();
+                    context.go('/home');
+                  },
                 ),
               ),
               const SizedBox(height: 22),

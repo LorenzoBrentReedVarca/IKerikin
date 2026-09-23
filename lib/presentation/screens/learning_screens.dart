@@ -13,6 +13,7 @@ import 'package:video_player/video_player.dart';
 import '../../application/providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/models.dart';
+import '../widgets/coach_mark.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/decorative_scenes.dart';
 
@@ -330,15 +331,18 @@ class _Masthead extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            onPressed: () => context.push('/settings'),
-            tooltip: 'Settings and accessibility',
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.white.withValues(alpha: .18),
-              foregroundColor: Colors.white,
-              shape: const CircleBorder(),
+          CoachMarkTarget(
+            id: 'home-settings',
+            child: IconButton(
+              onPressed: () => context.push('/settings'),
+              tooltip: 'Settings and accessibility',
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.white.withValues(alpha: .18),
+                foregroundColor: Colors.white,
+                shape: const CircleBorder(),
+              ),
+              icon: const Icon(Icons.settings_outlined),
             ),
-            icon: const Icon(Icons.settings_outlined),
           ),
         ],
       ),

@@ -9,7 +9,6 @@ import '../../presentation/screens/child_screens.dart';
 import '../../presentation/screens/dictionary_screen.dart';
 import '../../presentation/screens/learning_screens.dart';
 import '../../presentation/screens/support_screens.dart';
-import '../../presentation/screens/tutorial_screen.dart';
 import '../../presentation/widgets/app_shell.dart';
 
 /// Provides declarative, session-aware application routing.
@@ -43,18 +42,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           (state.matchedLocation == '/login' ||
               state.matchedLocation == '/register'))
         return '/home';
-      // First-run onboarding: send any signed-in account that hasn't seen
-      // the tutorial yet on this device there before anywhere else, no
-      // matter how they arrived (fresh registration, email-verification
-      // return, or a plain sign-in). It stops firing once the tutorial
-      // screen marks the flag seen.
-      if (signedIn && state.matchedLocation != '/tutorial') {
-        final uid = session.value!.id;
-        final seen = ref
-            .read(sharedPreferencesProvider)
-            .getBool('has_seen_tutorial_$uid');
-        if (seen != true) return '/tutorial';
-      }
+      // First-run onboarding is no longer a destination: the tour runs as an
+      // overlay over the real app, so AppShell starts it once the shell is
+      // up rather than the router redirecting anywhere.
       return null;
     },
     routes: [
@@ -131,7 +121,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
-      GoRoute(path: '/tutorial', builder: (_, _) => const TutorialScreen()),
       GoRoute(path: '/admin', builder: (_, _) => const AdminScreen()),
       GoRoute(
         path: '/dictionary',
